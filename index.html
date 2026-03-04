@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>IRON LOG</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --blue: #3B82F6;
+    --blue-glow: rgba(59,130,246,0.4);
+    --violet: #8B5CF6;
+    --violet-glow: rgba(139,92,246,0.4);
+    --pink: #EC4899;
+    --pink-glow: rgba(236,72,153,0.4);
+    --green: #10B981;
+    --green-glow: rgba(16,185,129,0.4);
+    --yellow: #F59E0B;
+    --yellow-glow: rgba(245,158,11,0.4);
+    --bg: #060612;
+    --surface: #0D0D1F;
+    --surface2: #131328;
+    --surface3: #1A1A35;
+    --text: #E8E8FF;
+    --text-dim: #7070A0;
+    --border: rgba(139,92,246,0.15);
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bot: env(safe-area-inset-bottom, 34px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* GRID BG */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(139,92,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,92,246,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  #app {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    z-index: 1;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bot);
+  }
+
+  /* HEADER */
+  .header {
+    flex-shrink: 0;
+    padding: 12px 20px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, rgba(13,13,31,0.98) 0%, transparent 100%);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px; font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--blue), var(--violet), var(--pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px var(--violet-glow));
+  }
+
+  .header-stats {
+    display: flex; gap: 8px;
+  }
+
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  /* CONTENT */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .content::-webkit-scrollbar { display: none; }
+
+  /* TABS */
+  .tabs {
+    flex-shrink: 0;
+    display: flex;
+    padding: 8px 12px;
+    gap: 6px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .tab svg { width: 22px; height: 22px; transition: all 0.2s; }
+
+  .tab.active {
+    color: var(--text);
+    background: var(--surface3);
+    border-color: var(--border);
+  }
+
+  .tab.active.t0 { box-shadow: 0 0 12px var(--blue-glow); }
+  .tab.active.t1 { box-shadow: 0 0 12px var(--violet-glow); }
+  .tab.active.t2 { box-shadow: 0 0 12px var(--pink-glow); }
+  .tab.active.t3 { box-shadow: 0 0 12px var(--green-glow); }
+
+  /* PAGES */
+  .page { display: none; padding: 8px 16px 20px; }
+  .page.active { display: block; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 16px 0 10px;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent);
+  }
+
+  /* HERO STATS */
+  .hero-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 12px;
+  }
+
+  .hero-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero-card::after {
+    content: '';
+    position: absolute; bottom: -20px; right: -20px;
+    width: 60px; height: 60px; border-radius: 50%;
+    opacity: 0.08;
+  }
+
+  .hero-card.blue::after { background: var(--blue); }
+  .hero-card.violet::after { background: var(--violet); }
+  .hero-card.pink::after { background: var(--pink); }
+  .hero-card.green::after { background: var(--green); }
+  .hero-card.yellow::after { background: var(--yellow); }
+
+  .hero-label {
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+  }
+
+  .hero-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 26px; font-weight: 900;
+    line-height: 1;
+  }
+
+  .hero-val.blue { color: var(--blue); text-shadow: 0 0 12px var(--blue-glow); }
+  .hero-val.violet { color: var(--violet); text-shadow: 0 0 12px var(--violet-glow); }
+  .hero-val.pink { color: var(--pink); text-shadow: 0 0 12px var(--pink-glow); }
+  .hero-val.green { color: var(--green); text-shadow: 0 0 12px var(--green-glow); }
+  .hero-val.yellow { color: var(--yellow); text-shadow: 0 0 12px var(--yellow-glow); }
+
+  .hero-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  /* EXERCISE SELECTOR */
+  .ex-scroll {
+    display: flex; gap: 8px;
+    overflow-x: auto; padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 4px;
+  }
+
+  .ex-scroll::-webkit-scrollbar { display: none; }
+
+  .ex-chip {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .ex-chip.active {
+    color: #fff;
+    border-color: var(--violet);
+    background: rgba(139,92,246,0.15);
+    box-shadow: 0 0 10px var(--violet-glow);
+  }
+
+  /* CANVAS */
+  canvas { width: 100% !important; display: block; }
+
+  .chart-wrap {
+    position: relative;
+    background: var(--surface3);
+    border-radius: 12px;
+    padding: 12px 8px 8px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+
+  .chart-label {
+    font-size: 10px; color: var(--text-dim);
+    text-align: center; margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* 1RM CARD */
+  .rm-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .rm-card {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .rm-ex {
+    font-size: 10px; color: var(--text-dim);
+    margin-bottom: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .rm-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px; font-weight: 900;
+    margin-bottom: 2px;
+  }
+
+  .rm-type {
+    font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  /* FORMULA INFO */
+  .formula-box {
+    background: rgba(139,92,246,0.05);
+    border: 1px solid rgba(139,92,246,0.2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .formula-box strong { color: var(--violet); }
+
+  /* HISTORY */
+  .workout-day {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .workout-day-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .workout-date {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px; font-weight: 700;
+    color: var(--violet);
+  }
+
+  .workout-exercises-list {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .workout-sets-count {
+    font-size: 11px; color: var(--text-dim);
+    background: var(--surface3);
+    border-radius: 10px; padding: 3px 8px;
+  }
+
+  .workout-day-body {
+    padding: 0 14px 12px;
+    display: none;
+  }
+
+  .workout-day-body.open { display: block; }
+
+  .set-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+
+  .set-row:last-child { border-bottom: none; }
+
+  .set-ex-name { color: var(--text-dim); flex: 1; }
+  .set-num { color: var(--text-dim); font-size: 10px; width: 28px; }
+  .set-reps { color: var(--green); font-weight: 600; width: 44px; text-align: right; }
+  .set-weight { color: var(--blue); font-weight: 600; width: 44px; text-align: right; }
+
+  /* ADD WORKOUT */
+  .input-group { margin-bottom: 12px; }
+  .input-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; letter-spacing: 0.5px; }
+
+  .inp {
+    width: 100%;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .inp:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+  select.inp option { background: var(--surface3); }
+
+  .sets-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+  .set-input-row {
+    display: flex; gap: 8px; align-items: center;
+  }
+
+  .set-num-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; color: var(--text-dim);
+    width: 24px; flex-shrink: 0;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--violet), var(--blue));
+    color: white;
+    box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+  }
+
+  .btn-primary:active { transform: scale(0.97); }
+
+  .btn-sm {
+    width: auto; padding: 8px 14px; font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .btn-add-set {
+    background: var(--surface3);
+    border: 1px dashed rgba(139,92,246,0.3);
+    color: var(--violet);
+    margin-top: 4px;
+  }
+
+  .btn-remove {
+    background: transparent; border: none;
+    color: var(--pink); font-size: 16px;
+    cursor: pointer; padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  .btn-remove:active { background: rgba(236,72,153,0.1); }
+
+  /* SUCCESS TOAST */
+  .toast {
+    position: fixed; bottom: calc(80px + var(--safe-bot));
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--green);
+    color: #000; font-weight: 700; font-size: 13px;
+    padding: 10px 20px; border-radius: 20px;
+    opacity: 0; transition: all 0.3s;
+    pointer-events: none; z-index: 999;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* PROGRESS RING */
+  .progress-ring-wrap {
+    display: flex; justify-content: center; margin: 8px 0;
+  }
+
+  /* STREAK */
+  .streak-bar {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;
+  }
+
+  .streak-dot {
+    width: 10px; height: 10px; border-radius: 3px;
+    background: var(--surface3);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .streak-dot.active { background: var(--violet); border-color: var(--violet); box-shadow: 0 0 4px var(--violet-glow); }
+  .streak-dot.recent { background: var(--blue); border-color: var(--blue); }
+
+  /* MONTH LABEL */
+  .month-label {
+    font-size: 10px; color: var(--text-dim);
+    text-align: center; margin: 4px 0 8px;
+    font-family: 'Orbitron', monospace; letter-spacing: 1px;
+  }
+
+  /* ANIMATIONS */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px var(--violet-glow); }
+    50% { box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(139,92,246,0.15); }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .page.active .card, .page.active .hero-card {
+    animation: fadeInUp 0.3s ease both;
+  }
+
+  .page.active .card:nth-child(2) { animation-delay: 0.05s; }
+  .page.active .card:nth-child(3) { animation-delay: 0.10s; }
+  .page.active .card:nth-child(4) { animation-delay: 0.15s; }
+
+  /* CHART LEGEND */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-dim); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* GLOW LINE */
+  .glow-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--violet), var(--blue), transparent);
+    margin: 16px 0;
+    opacity: 0.3;
+  }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center; padding: 32px 16px;
+    color: var(--text-dim); font-size: 13px;
+  }
+
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* FILTER */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+
+  .filter-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 5px 12px;
+    font-size: 11px; color: var(--text-dim); cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-chip.active {
+    background: rgba(236,72,153,0.15); border-color: var(--pink); color: var(--pink);
+  }
+
+  /* VOLUME BAR */
+  .vol-bar-wrap { margin-top: 6px; }
+  .vol-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .vol-bar-label { font-size: 11px; color: var(--text-dim); width: 120px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vol-bar-track { flex: 1; height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+  .vol-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .vol-bar-val { font-size: 11px; color: var(--text-dim); width: 40px; text-align: right; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="logo">IRON LOG</div>
+    <div class="header-stats">
+      <div class="badge"><span class="dot" style="background:var(--green)"></span><span id="totalWorkouts">0</span> тренировок</div>
+      <div class="badge"><span id="totalSets">0</span> подходов</div>
+    </div>
+  </div>
+
+  <div class="content" id="mainContent">
+    <!-- PAGE 0: DASHBOARD -->
+    <div class="page active" id="page0">
+      <div class="hero-grid">
+        <div class="hero-card blue">
+          <div class="hero-label">Всего дней</div>
+          <div class="hero-val blue" id="d-days">0</div>
+          <div class="hero-sub">тренировок</div>
+        </div>
+        <div class="hero-card violet">
+          <div class="hero-label">Последняя</div>
+          <div class="hero-val violet" style="font-size:16px" id="d-last">–</div>
+          <div class="hero-sub">тренировка</div>
+        </div>
+        <div class="hero-card pink">
+          <div class="hero-label">Подходов</div>
+          <div class="hero-val pink" id="d-sets">0</div>
+          <div class="hero-sub">всего</div>
+        </div>
+        <div class="hero-card green">
+          <div class="hero-label">Упражнений</div>
+          <div class="hero-val green" id="d-exs">0</div>
+          <div class="hero-sub">разных</div>
+        </div>
+      </div>
+
+      <div class="section-title">Активность (последние 90 дней)</div>
+      <div class="card">
+        <div class="streak-bar" id="activityBar"></div>
+      </div>
+
+      <div class="section-title">Объём по упражнениям (кг×повт)</div>
+      <div class="card">
+        <div class="vol-bar-wrap" id="volumeBars"></div>
+      </div>
+
+      <div class="section-title">1RM — все упражнения</div>
+      <div class="rm-grid" id="allRm"></div>
+    </div>
+
+    <!-- PAGE 1: CHARTS -->
+    <div class="page" id="page1">
+      <div class="section-title">Выберите упражнение</div>
+      <div class="ex-scroll" id="exChips"></div>
+
+      <div class="section-title">1RM прогресс</div>
+      <div class="card">
+        <div class="legend" id="rmLegend"></div>
+        <div class="chart-wrap">
+          <canvas id="rmChart" height="180"></canvas>
+        </div>
+        <div class="chart-label" id="rmFormula"></div>
+      </div>
+
+      <div class="section-title">Максимальный вес (кг)</div>
+      <div class="card">
+        <div class="chart-wrap">
+          <canvas id="weightChart" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="section-title">Объём за тренировку (кг × повт)</div>
+      <div class="card">
+        <div class="chart-wrap">
+          <canvas id="volumeChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: HISTORY -->
+    <div class="page" id="page2">
+      <div class="filter-row" id="histFilter"></div>
+      <div id="historyList"></div>
+    </div>
+
+    <!-- PAGE 3: ADD -->
+    <div class="page" id="page3">
+      <div class="section-title">Новая тренировка</div>
+      <div class="card">
+        <div class="input-group">
+          <div class="input-label">ДАТА</div>
+          <input type="date" class="inp" id="newDate">
+        </div>
+        <div class="input-group">
+          <div class="input-label">УПРАЖНЕНИЕ</div>
+          <select class="inp" id="newExercise">
+            <option value="Жим лежа">Жим лежа</option>
+            <option value="Приседания">Приседания</option>
+            <option value="Становая тяга">Становая тяга</option>
+            <option value="Отжимания на брусьях">Отжимания на брусьях</option>
+            <option value="Тяга блока горизонтальная">Тяга блока горизонтальная</option>
+            <option value="Тяга блока вертикальная">Тяга блока вертикальная</option>
+            <option value="Бицепс">Бицепс</option>
+          </select>
+        </div>
+        <div class="input-label">ПОДХОДЫ</div>
+        <div class="sets-container" id="setsContainer"></div>
+        <button class="btn btn-add-set btn-sm" onclick="addSetInput()">+ Добавить подход</button>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveWorkout()" style="margin-top:4px">
+        💾 Сохранить тренировку
+      </button>
+
+      <div class="glow-line" style="margin-top:20px"></div>
+      <div class="section-title">Калькулятор 1RM</div>
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="flex:1">
+            <div class="input-label">УПРАЖНЕНИЕ</div>
+            <select class="inp" id="calcEx" onchange="calcRM()">
+              <option value="upper">Верх тела (Epley)</option>
+              <option value="lower">Низ тела (O'Conner)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div style="flex:1">
+            <div class="input-label">ВЕС (кг)</div>
+            <input type="number" class="inp" id="calcWeight" placeholder="70" oninput="calcRM()">
+          </div>
+          <div style="flex:1">
+            <div class="input-label">ПОВТОРЕНИЯ</div>
+            <input type="number" class="inp" id="calcReps" placeholder="5" oninput="calcRM()">
+          </div>
+        </div>
+        <div id="calcResult" style="text-align:center;padding:10px">
+          <div class="hero-label">РАСЧЁТНЫЙ 1RM</div>
+          <div class="hero-val violet" style="font-size:36px" id="calcRmVal">—</div>
+          <div class="hero-sub" id="calcFormula"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active t0" onclick="showPage(0)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Обзор
+    </div>
+    <div class="tab t1" onclick="showPage(1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Графики
+    </div>
+    <div class="tab t2" onclick="showPage(2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+      </svg>
+      История
+    </div>
+    <div class="tab t3" onclick="showPage(3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Добавить
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Тренировка сохранена!</div>
+
+<script>
+// ===================== DATA =====================
+const LOWER_BODY = ['Приседания', 'Становая тяга'];
+const UPPER_BODY = ['Жим лежа', 'Отжимания на брусьях', 'Тяга блока горизонтальная', 'Тяга блока вертикальная', 'Бицепс'];
+
+const EX_COLORS = {
+  'Жим лежа': '#3B82F6',
+  'Приседания': '#8B5CF6',
+  'Становая тяга': '#EC4899',
+  'Отжимания на брусьях': '#10B981',
+  'Тяга блока горизонтальная': '#F59E0B',
+  'Тяга блока вертикальная': '#06B6D4',
+  'Бицепс': '#F97316'
+};
+
+let workoutData = [{"date":"2024-11-23","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-23","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-23","exercise":"Приседания","set":1,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Приседания","set":2,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Приседания","set":3,"reps":10,"weight":20},{"date":"2024-11-28","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-28","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-28","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-28","exercise":"Приседания","set":1,"reps":10,"weight":15},{"date":"2024-11-28","exercise":"Приседания","set":2,"reps":10,"weight":15},{"date":"2024-11-30","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-30","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-30","exercise":"Жим лежа","set":4,"reps":10,"weight":40},{"date":"2024-11-30","exercise":"Приседания","set":1,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Приседания","set":2,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Приседания","set":3,"reps":10,"weight":20},{"date":"2024-12-04","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-04","exercise":"Жим лежа","set":3,"reps":12,"weight":35},{"date":"2024-12-04","exercise":"Жим лежа","set":4,"reps":12,"weight":40},{"date":"2024-12-04","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Приседания","set":3,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-07","exercise":"Жим лежа","set":3,"reps":12,"weight":35},{"date":"2024-12-07","exercise":"Жим лежа","set":4,"reps":12,"weight":40},{"date":"2024-12-07","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Приседания","set":3,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-10","exercise":"Жим лежа","set":3,"reps":12,"weight":40},{"date":"2024-12-10","exercise":"Жим лежа","set":4,"reps":12,"weight":45},{"date":"2024-12-10","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Приседания","set":3,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-14","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Жим лежа","set":3,"reps":12,"weight":40},{"date":"2024-12-14","exercise":"Жим лежа","set":4,"reps":12,"weight":45},{"date":"2024-12-14","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-14","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2024-12-17","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-17","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-17","exercise":"Жим лежа","set":3,"reps":12,"weight":45},{"date":"2024-12-17","exercise":"Жим лежа","set":4,"reps":8,"weight":50},{"date":"2024-12-17","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-17","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2024-12-17","exercise":"Приседания","set":3,"reps":14,"weight":40},{"date":"2024-12-17","exercise":"Приседания","set":4,"reps":10,"weight":45},{"date":"2024-12-21","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-21","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-21","exercise":"Жим лежа","set":3,"reps":12,"weight":45},{"date":"2024-12-21","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2024-12-21","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2024-12-21","exercise":"Приседания","set":3,"reps":12,"weight":45},{"date":"2024-12-24","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-24","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-24","exercise":"Жим лежа","set":3,"reps":12,"weight":50},{"date":"2024-12-24","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2024-12-24","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2024-12-24","exercise":"Приседания","set":3,"reps":20,"weight":35},{"date":"2024-12-24","exercise":"Приседания","set":4,"reps":12,"weight":40},{"date":"2024-12-28","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-28","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-28","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2024-12-28","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2024-12-28","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2024-12-28","exercise":"Приседания","set":3,"reps":16,"weight":40},{"date":"2025-01-03","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-03","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2025-01-03","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2025-01-03","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2025-01-03","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2025-01-03","exercise":"Приседания","set":3,"reps":20,"weight":40},{"date":"2025-01-07","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-07","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-07","exercise":"Жим лежа","set":3,"reps":11,"weight":55},{"date":"2025-01-07","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-07","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-07","exercise":"Приседания","set":3,"reps":18,"weight":40},{"date":"2025-01-11","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-11","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2025-01-11","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2025-01-11","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-11","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-11","exercise":"Приседания","set":3,"reps":12,"weight":40},{"date":"2025-01-14","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-14","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-14","exercise":"Жим лежа","set":3,"reps":12,"weight":55},{"date":"2025-01-14","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-14","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-14","exercise":"Приседания","set":3,"reps":18,"weight":40},{"date":"2025-01-18","exercise":"Жим лежа","set":1,"reps":12,"weight":35},{"date":"2025-01-18","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-18","exercise":"Жим лежа","set":3,"reps":14,"weight":55},{"date":"2025-01-18","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-18","exercise":"Приседания","set":2,"reps":15,"weight":40},{"date":"2025-01-18","exercise":"Приседания","set":3,"reps":15,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":2,"reps":10,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":3,"reps":10,"weight":50},{"date":"2025-01-21","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-21","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-21","exercise":"Приседания","set":3,"reps":20,"weight":40},{"date":"2025-01-25","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-25","exercise":"Жим лежа","set":2,"reps":12,"weight":50},{"date":"2025-01-25","exercise":"Жим лежа","set":3,"reps":8,"weight":55},{"date":"2025-01-25","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-01-25","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2025-01-25","exercise":"Приседания","set":3,"reps":8,"weight":45},{"date":"2025-01-28","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-28","exercise":"Жим лежа","set":2,"reps":12,"weight":50},{"date":"2025-01-28","exercise":"Жим лежа","set":3,"reps":8,"weight":55},{"date":"2025-01-28","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-01-28","exercise":"Приседания","set":2,"reps":8,"weight":40},{"date":"2025-01-28","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2025-02-01","exercise":"Жим лежа","set":1,"reps":6,"weight":45},{"date":"2025-02-01","exercise":"Жим лежа","set":2,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":3,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":4,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":5,"reps":8,"weight":55},{"date":"2025-02-01","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-02-01","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2025-02-01","exercise":"Приседания","set":3,"reps":12,"weight":40},{"date":"2025-02-04","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-02-04","exercise":"Жим лежа","set":2,"reps":8,"weight":50},{"date":"2025-02-04","exercise":"Жим лежа","set":3,"reps":8,"weight":50},{"date":"2025-02-04","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-02-04","exercise":"Приседания","set":2,"reps":8,"weight":40},{"date":"2025-02-04","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2025-02-08","exercise":"Жим лежа","set":1,"reps":6,"weight":47.5},{"date":"2025-02-08","exercise":"Жим лежа","set":2,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":3,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":4,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":5,"reps":10,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":6,"reps":5,"weight":60},{"date":"2025-02-08","exercise":"Приседания","set":1,"reps":12,"weight":32.5},{"date":"2025-02-08","exercise":"Приседания","set":2,"reps":12,"weight":42.5},{"date":"2025-02-08","exercise":"Приседания","set":3,"reps":15,"weight":42.5},{"date":"2025-02-15","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-02-15","exercise":"Жим лежа","set":2,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":3,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":4,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":5,"reps":8,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":6,"reps":3,"weight":65},{"date":"2025-02-15","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-02-15","exercise":"Приседания","set":2,"reps":12,"weight":45},{"date":"2025-02-15","exercise":"Приседания","set":3,"reps":12,"weight":45},{"date":"2025-02-15","exercise":"Приседания","set":4,"reps":12,"weight":45},{"date":"2025-02-16","exercise":"Жим лежа","set":1,"reps":8,"weight":55},{"date":"2025-02-16","exercise":"Жим лежа","set":2,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":3,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":4,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":5,"reps":8,"weight":62.5},{"date":"2025-02-16","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-02-16","exercise":"Приседания","set":2,"reps":14,"weight":45},{"date":"2025-02-16","exercise":"Приседания","set":3,"reps":12,"weight":46},{"date":"2025-02-16","exercise":"Приседания","set":4,"reps":12,"weight":46},{"date":"2025-03-01","exercise":"Жим лежа","set":1,"reps":8,"weight":55},{"date":"2025-03-01","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":5,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-03-01","exercise":"Приседания","set":2,"reps":12,"weight":47.5},{"date":"2025-03-01","exercise":"Приседания","set":3,"reps":12,"weight":47.5},{"date":"2025-03-01","exercise":"Приседания","set":4,"reps":12,"weight":47.5},{"date":"2025-03-11","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Жим лежа","set":2,"reps":5,"weight":60},{"date":"2025-03-11","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-11","exercise":"Жим лежа","set":4,"reps":2,"weight":65},{"date":"2025-03-11","exercise":"Жим лежа","set":5,"reps":2,"weight":67.5},{"date":"2025-03-11","exercise":"Приседания","set":1,"reps":10,"weight":40},{"date":"2025-03-11","exercise":"Приседания","set":2,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Приседания","set":3,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Приседания","set":4,"reps":12,"weight":50},{"date":"2025-03-15","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-15","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":5,"reps":11,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-03-18","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":3,"reps":12,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":4,"reps":14,"weight":50},{"date":"2025-03-22","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-22","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":5,"reps":1,"weight":70},{"date":"2025-03-22","exercise":"Жим лежа","set":6,"reps":1,"weight":70},{"date":"2025-03-23","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-23","exercise":"Жим лежа","set":2,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":3,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":5,"reps":7,"weight":65},{"date":"2025-04-01","exercise":"Приседания","set":1,"reps":12,"weight":45},{"date":"2025-04-01","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-01","exercise":"Приседания","set":3,"reps":12,"weight":50},{"date":"2025-04-01","exercise":"Приседания","set":4,"reps":10,"weight":50},{"date":"2025-04-12","exercise":"Жим лежа","set":1,"reps":9,"weight":50},{"date":"2025-04-12","exercise":"Жим лежа","set":2,"reps":10,"weight":60},{"date":"2025-04-12","exercise":"Жим лежа","set":3,"reps":7,"weight":65},{"date":"2025-04-12","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-04-15","exercise":"Приседания","set":1,"reps":12,"weight":45},{"date":"2025-04-15","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-15","exercise":"Приседания","set":3,"reps":6,"weight":50},{"date":"2025-04-16","exercise":"Жим лежа","set":1,"reps":9,"weight":50},{"date":"2025-04-16","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-04-16","exercise":"Жим лежа","set":3,"reps":8,"weight":65},{"date":"2025-04-16","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-04-26","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-04-26","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-04-26","exercise":"Жим лежа","set":3,"reps":10,"weight":65},{"date":"2025-04-26","exercise":"Жим лежа","set":4,"reps":9,"weight":65},{"date":"2025-04-29","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-04-29","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-29","exercise":"Приседания","set":3,"reps":15,"weight":50},{"date":"2025-05-04","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-04","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-04","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-05-04","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-05-11","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-11","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-11","exercise":"Жим лежа","set":3,"reps":8,"weight":65},{"date":"2025-05-11","exercise":"Жим лежа","set":4,"reps":7,"weight":65},{"date":"2025-05-13","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-05-13","exercise":"Приседания","set":2,"reps":15,"weight":50},{"date":"2025-05-13","exercise":"Приседания","set":3,"reps":15,"weight":50},{"date":"2025-05-17","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-17","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-17","exercise":"Жим лежа","set":3,"reps":9,"weight":65},{"date":"2025-05-17","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-05-27","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-05-27","exercise":"Приседания","set":2,"reps":15,"weight":50},{"date":"2025-05-27","exercise":"Приседания","set":3,"reps":18,"weight":50},{"date":"2025-05-31","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-31","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-31","exercise":"Жим лежа","set":3,"reps":11,"weight":65},{"date":"2025-05-31","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-06-01","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-06-01","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-06-01","exercise":"Жим лежа","set":3,"reps":10,"weight":65},{"date":"2025-06-01","exercise":"Жим лежа","set":4,"reps":6,"weight":70},{"date":"2025-06-10","exercise":"Приседания","set":1,"reps":8,"weight":45},{"date":"2025-06-10","exercise":"Приседания","set":2,"reps":10,"weight":55},{"date":"2025-06-10","exercise":"Приседания","set":3,"reps":15,"weight":55},{"date":"2025-06-11","exercise":"Приседания","set":1,"reps":8,"weight":50},{"date":"2025-06-11","exercise":"Приседания","set":2,"reps":10,"weight":60},{"date":"2025-06-11","exercise":"Приседания","set":3,"reps":10,"weight":60},{"date":"2025-06-11","exercise":"Приседания","set":4,"reps":10,"weight":60},{"date":"2025-07-12","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-07-12","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-07-12","exercise":"Жим лежа","set":3,"reps":9,"weight":65},{"date":"2025-07-15","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-07-15","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-07-15","exercise":"Приседания","set":3,"reps":18,"weight":60},{"date":"2025-07-26","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-07-26","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-07-26","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-07-26","exercise":"Жим лежа","set":4,"reps":7,"weight":70},{"date":"2025-07-29","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-07-29","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-07-29","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-07-29","exercise":"Приседания","set":4,"reps":8,"weight":65},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":3,"reps":12,"weight":1},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":4,"reps":6,"weight":1},{"date":"2025-08-12","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-08-12","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-08-12","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-08-12","exercise":"Приседания","set":4,"reps":12,"weight":65},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":3,"reps":12,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":4,"reps":12,"weight":0},{"date":"2025-08-19","exercise":"Приседания","set":1,"reps":12,"weight":1},{"date":"2025-08-19","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2025-08-19","exercise":"Приседания","set":3,"reps":12,"weight":30},{"date":"2025-08-21","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-08-21","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-08-21","exercise":"Жим лежа","set":3,"reps":9,"weight":70},{"date":"2025-08-21","exercise":"Жим лежа","set":4,"reps":9,"weight":70},{"date":"2025-09-13","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-09-13","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-09-13","exercise":"Жим лежа","set":3,"reps":5,"weight":70},{"date":"2025-09-13","exercise":"Жим лежа","set":4,"reps":4,"weight":70},{"date":"2025-09-16","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-09-16","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-09-16","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-09-16","exercise":"Приседания","set":4,"reps":16,"weight":65},{"date":"2025-09-27","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-09-27","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-09-27","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":2,"reps":12,"weight":0},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":3,"reps":20,"weight":0},{"date":"2025-09-30","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-09-30","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-09-30","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-09-30","exercise":"Приседания","set":4,"reps":14,"weight":65},{"date":"2025-10-11","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-10-11","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-10-11","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":3,"reps":17,"weight":0},{"date":"2025-10-14","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-10-14","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-10-14","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-10-14","exercise":"Приседания","set":4,"reps":15,"weight":65},{"date":"2025-10-25","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-10-25","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-10-25","exercise":"Жим лежа","set":3,"reps":4,"weight":70},{"date":"2025-10-28","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-10-28","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-10-28","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-10-28","exercise":"Приседания","set":4,"reps":20,"weight":65},{"date":"2025-11-08","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-11-08","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-11-08","exercise":"Жим лежа","set":3,"reps":6,"weight":70},{"date":"2025-11-11","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-11-11","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-11-11","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-11-11","exercise":"Приседания","set":4,"reps":12,"weight":70},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":3,"reps":16,"weight":0},{"date":"2025-11-18","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-11-18","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-11-18","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-11-18","exercise":"Приседания","set":4,"reps":13,"weight":70},{"date":"2025-11-22","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-11-22","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-11-22","exercise":"Жим лежа","set":3,"reps":6,"weight":70},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":3,"reps":18,"weight":0},{"date":"2025-12-02","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-12-02","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-12-02","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-12-02","exercise":"Приседания","set":4,"reps":13,"weight":70},{"date":"2025-12-06","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-06","exercise":"Жим лежа","set":2,"reps":7,"weight":70},{"date":"2025-12-06","exercise":"Жим лежа","set":3,"reps":3,"weight":70},{"date":"2025-12-10","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2025-12-10","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2025-12-10","exercise":"Становая тяга","set":3,"reps":10,"weight":70},{"date":"2025-12-10","exercise":"Становая тяга","set":4,"reps":10,"weight":70},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2025-12-16","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-16","exercise":"Жим лежа","set":2,"reps":3,"weight":70},{"date":"2025-12-16","exercise":"Жим лежа","set":3,"reps":3,"weight":70},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":2,"reps":12,"weight":0},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":3,"reps":8,"weight":0},{"date":"2025-12-22","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-22","exercise":"Жим лежа","set":2,"reps":5,"weight":70},{"date":"2025-12-22","exercise":"Жим лежа","set":3,"reps":4,"weight":70},{"date":"2025-12-22","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2025-12-22","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2025-12-22","exercise":"Становая тяга","set":3,"reps":12,"weight":70},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":3,"reps":18,"weight":0},{"date":"2026-01-24","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2026-01-24","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2026-01-24","exercise":"Становая тяга","set":3,"reps":13,"weight":70},{"date":"2026-02-17","exercise":"Приседания","set":1,"reps":12,"weight":50},{"date":"2026-02-17","exercise":"Приседания","set":2,"reps":12,"weight":60},{"date":"2026-02-17","exercise":"Приседания","set":3,"reps":13,"weight":70},{"date":"2026-02-21","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2026-02-21","exercise":"Жим лежа","set":2,"reps":6,"weight":70},{"date":"2026-02-21","exercise":"Жим лежа","set":3,"reps":5,"weight":70},{"date":"2026-02-24","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2026-02-24","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2026-02-24","exercise":"Становая тяга","set":3,"reps":17,"weight":70},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":1,"reps":12,"weight":37},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":2,"reps":12,"weight":37},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":3,"reps":9,"weight":47},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":1,"reps":12,"weight":35},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":2,"reps":12,"weight":35},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":3,"reps":10,"weight":35},{"date":"2026-03-01","exercise":"Бицепс","set":1,"reps":12,"weight":20},{"date":"2026-03-01","exercise":"Бицепс","set":2,"reps":10,"weight":20},{"date":"2026-03-01","exercise":"Бицепс","set":3,"reps":8,"weight":20},{"date":"2026-03-03","exercise":"Приседания","set":1,"reps":12,"weight":50},{"date":"2026-03-03","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2026-03-03","exercise":"Приседания","set":3,"reps":16,"weight":70}];
+
+// Load from localStorage if available
+const stored = localStorage.getItem('ironlog_data');
+if (stored) {
+  try {
+    const extra = JSON.parse(stored);
+    workoutData = [...workoutData, ...extra];
+  } catch(e) {}
+}
+
+// ===================== 1RM FORMULAS =====================
+// Upper body: Epley formula — 1RM = w * (1 + r/30)
+// Lower body: O'Conner formula — 1RM = w * (1 + r/40)  [lower body muscles fatigue differently, less CNS efficiency]
+function calc1RM(weight, reps, exercise) {
+  if (weight <= 0) return reps; // bodyweight
+  if (reps === 1) return weight;
+  const isLower = LOWER_BODY.includes(exercise);
+  if (isLower) {
+    // O'Conner (modified for lower body): w * (1 + r/40)
+    return Math.round(weight * (1 + reps / 40) * 10) / 10;
+  } else {
+    // Epley (upper body): w * (1 + r/30)
+    return Math.round(weight * (1 + reps / 30) * 10) / 10;
+  }
+}
+
+function getBest1RM(exercise) {
+  const sets = workoutData.filter(d => d.exercise === exercise && d.weight > 0);
+  if (!sets.length) return 0;
+  return Math.max(...sets.map(s => calc1RM(s.weight, s.reps, exercise)));
+}
+
+function getExercises() {
+  return [...new Set(workoutData.map(d => d.exercise))];
+}
+
+function getWorkoutDays() {
+  return [...new Set(workoutData.map(d => d.date))].sort();
+}
+
+// ===================== CHARTS STATE =====================
+let charts = {};
+let selectedEx = null;
+
+// ===================== INIT =====================
+function init() {
+  const days = getWorkoutDays();
+  const exs = getExercises();
+  document.getElementById('d-days').textContent = days.length;
+  document.getElementById('d-last').textContent = days.length ? formatDateShort(days[days.length-1]) : '–';
+  document.getElementById('d-sets').textContent = workoutData.length;
+  document.getElementById('d-exs').textContent = exs.length;
+  document.getElementById('totalWorkouts').textContent = days.length;
+  document.getElementById('totalSets').textContent = workoutData.length;
+
+  buildActivityBar();
+  buildVolumeBars();
+  buildAllRM();
+  buildExChips();
+  buildHistory();
+  initAddForm();
+
+  selectedEx = exs[0];
+  updateCharts();
+}
+
+function formatDateShort(d) {
+  const [y,m,day] = d.split('-');
+  const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  return `${parseInt(day)} ${months[parseInt(m)-1]}`;
+}
+
+function formatDateFull(d) {
+  const [y,m,day] = d.split('-');
+  const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+// ===================== ACTIVITY BAR =====================
+function buildActivityBar() {
+  const container = document.getElementById('activityBar');
+  container.innerHTML = '';
+  const days = new Set(getWorkoutDays());
+  const today = new Date();
+  for (let i = 89; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dot = document.createElement('div');
+    dot.className = 'streak-dot' + (days.has(key) ? (i < 14 ? ' recent' : ' active') : '');
+    dot.title = key;
+    container.appendChild(dot);
+  }
+}
+
+// ===================== VOLUME BARS =====================
+function buildVolumeBars() {
+  const container = document.getElementById('volumeBars');
+  const exs = getExercises();
+  const vols = {};
+  exs.forEach(ex => {
+    vols[ex] = workoutData.filter(d => d.exercise === ex).reduce((s, d) => s + d.weight * d.reps, 0);
+  });
+  const maxVol = Math.max(...Object.values(vols));
+  const sorted = Object.entries(vols).sort((a,b) => b[1]-a[1]);
+  const colors = ['var(--blue)','var(--violet)','var(--pink)','var(--green)','var(--yellow)','#06B6D4','#F97316'];
+  container.innerHTML = sorted.map(([ex, vol], i) => `
+    <div class="vol-bar-row">
+      <div class="vol-bar-label">${ex}</div>
+      <div class="vol-bar-track"><div class="vol-bar-fill" style="width:${(vol/maxVol*100).toFixed(1)}%;background:${colors[i%colors.length]}"></div></div>
+      <div class="vol-bar-val">${Math.round(vol/1000)}к</div>
+    </div>
+  `).join('');
+}
+
+// ===================== ALL 1RM =====================
+function buildAllRM() {
+  const container = document.getElementById('allRm');
+  const exs = getExercises();
+  const colors = ['blue','violet','pink','green','yellow','#06B6D4','#F97316'];
+  const colorVals = ['var(--blue)','var(--violet)','var(--pink)','var(--green)','var(--yellow)','var(--blue)','var(--yellow)'];
+  container.innerHTML = exs.map((ex, i) => {
+    const rm = getBest1RM(ex);
+    const isLower = LOWER_BODY.includes(ex);
+    return `
+      <div class="rm-card">
+        <div class="rm-ex">${ex}</div>
+        <div class="rm-val" style="color:${colorVals[i%colorVals.length]}">${rm > 0 ? rm + ' кг' : '—'}</div>
+        <div class="rm-type">${isLower ? '🦵 O\'Conner' : '💪 Epley'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===================== EXERCISE CHIPS =====================
+function buildExChips() {
+  const container = document.getElementById('exChips');
+  const exs = getExercises();
+  container.innerHTML = exs.map((ex, i) => `
+    <div class="ex-chip ${i===0?'active':''}" onclick="selectEx('${ex}',this)">${ex}</div>
+  `).join('');
+}
+
+function selectEx(ex, el) {
+  document.querySelectorAll('.ex-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedEx = ex;
+  updateCharts();
+}
+
+// ===================== CHARTS =====================
+function updateCharts() {
+  if (!selectedEx) return;
+  const ex = selectedEx;
+  const color = EX_COLORS[ex] || '#8B5CF6';
+  const isLower = LOWER_BODY.includes(ex);
+
+  // Get per-day data
+  const days = [...new Set(workoutData.filter(d => d.exercise === ex).map(d => d.date))].sort();
+  const rm1Data = days.map(date => {
+    const sets = workoutData.filter(d => d.date === date && d.exercise === ex && d.weight > 0);
+    if (!sets.length) return null;
+    return Math.max(...sets.map(s => calc1RM(s.weight, s.reps, ex)));
+  }).filter(v => v !== null);
+
+  const maxWeightData = days.map(date => {
+    const sets = workoutData.filter(d => d.date === date && d.exercise === ex);
+    return Math.max(...sets.map(s => s.weight));
+  });
+
+  const volumeData = days.map(date => {
+    const sets = workoutData.filter(d => d.date === date && d.exercise === ex);
+    return sets.reduce((s, d) => s + d.weight * d.reps, 0);
+  });
+
+  const labels = days.map(d => {
+    const [y,m,day] = d.split('-');
+    return `${parseInt(day)}.${parseInt(m)}`;
+  });
+
+  const formula = isLower ? "Формула O'Conner (низ тела): 1RM = вес × (1 + повт/40)" : "Формула Epley (верх тела): 1RM = вес × (1 + повт/30)";
+  document.getElementById('rmFormula').textContent = formula;
+  document.getElementById('rmLegend').innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${ex}</div>
+    <div class="legend-item" style="margin-left:auto;font-size:10px;color:${color}">Лучший 1RM: ${Math.max(...rm1Data).toFixed(1)} кг</div>
+  `;
+
+  drawChart('rmChart', labels, rm1Data, color, true);
+  drawChart('weightChart', labels, maxWeightData, '#3B82F6', false);
+  drawChart('volumeChart', labels, volumeData, '#10B981', false);
+}
+
+function drawChart(canvasId, labels, data, color, fill) {
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 2;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 16;
+  const H = parseInt(canvas.getAttribute('height'));
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pad = { top: 12, right: 12, bottom: 28, left: 36 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (!data.length) return;
+
+  const min = Math.min(...data) * 0.9;
+  const max = Math.max(...data) * 1.05;
+  const range = max - min || 1;
+
+  const xStep = data.length > 1 ? cW / (data.length - 1) : cW;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + cH - (i / 4) * cH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cW, y); ctx.stroke();
+    const val = min + (i / 4) * range;
+    ctx.fillStyle = 'rgba(160,160,200,0.5)';
+    ctx.font = '9px Outfit'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(val), pad.left - 4, y + 3);
+  }
+
+  // Fill gradient
+  if (fill && data.length > 1) {
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH);
+    grad.addColorStop(0, color + '40');
+    grad.addColorStop(1, color + '00');
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad.left + i * xStep;
+      const y = pad.top + cH - ((v - min) / range) * cH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(pad.left + (data.length-1) * xStep, pad.top + cH);
+    ctx.lineTo(pad.left, pad.top + cH);
+    ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+  }
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  data.forEach((v, i) => {
+    const x = pad.left + i * (data.length > 1 ? cW / (data.length-1) : 0);
+    const y = pad.top + cH - ((v - min) / range) * cH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Glow
+  ctx.beginPath();
+  ctx.strokeStyle = color + '40';
+  ctx.lineWidth = 6;
+  data.forEach((v, i) => {
+    const x = pad.left + i * (data.length > 1 ? cW / (data.length-1) : 0);
+    const y = pad.top + cH - ((v - min) / range) * cH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots
+  data.forEach((v, i) => {
+    const x = pad.left + i * (data.length > 1 ? cW / (data.length-1) : 0);
+    const y = pad.top + cH - ((v - min) / range) * cH;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#060612'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // X labels (show every N)
+  const n = Math.ceil(labels.length / 8);
+  ctx.fillStyle = 'rgba(160,160,200,0.5)';
+  ctx.font = '9px Outfit'; ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    if (i % n === 0 || i === labels.length-1) {
+      const x = pad.left + i * (data.length > 1 ? cW / (data.length-1) : 0);
+      ctx.fillText(l, x, pad.top + cH + 16);
+    }
+  });
+}
+
+// ===================== HISTORY =====================
+let histExFilter = null;
+
+function buildHistory() {
+  // Build filter
+  const filterContainer = document.getElementById('histFilter');
+  const exs = getExercises();
+  filterContainer.innerHTML = `<div class="filter-chip ${!histExFilter?'active':''}" onclick="setHistFilter(null,this)">Все</div>` +
+    exs.map(ex => `<div class="filter-chip ${histExFilter===ex?'active':''}" onclick="setHistFilter('${ex}',this)">${ex}</div>`).join('');
+
+  const container = document.getElementById('historyList');
+  const days = getWorkoutDays().slice().reverse();
+
+  if (!days.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🏋️</div>Тренировок пока нет</div>';
+    return;
+  }
+
+  container.innerHTML = days.map(date => {
+    const sets = workoutData.filter(d => d.date === date && (!histExFilter || d.exercise === histExFilter));
+    if (!sets.length) return '';
+    const exNames = [...new Set(sets.map(d => d.exercise))];
+    return `
+      <div class="workout-day">
+        <div class="workout-day-header" onclick="toggleDay(this)">
+          <div>
+            <div class="workout-date">${formatDateFull(date)}</div>
+            <div class="workout-exercises-list">${exNames.join(' · ')}</div>
+          </div>
+          <div class="workout-sets-count">${sets.length} подх.</div>
+        </div>
+        <div class="workout-day-body">
+          ${sets.map(s => `
+            <div class="set-row">
+              <div class="set-ex-name">${s.exercise}</div>
+              <div class="set-num">п${s.set}</div>
+              <div class="set-reps">${s.reps} повт</div>
+              <div class="set-weight">${s.weight > 0 ? s.weight + 'кг' : 'б/в'}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setHistFilter(ex, el) {
+  histExFilter = ex;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  buildHistory();
+}
+
+function toggleDay(el) {
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ===================== ADD FORM =====================
+let setCount = 3;
+
+function initAddForm() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('newDate').value = today;
+  renderSetInputs();
+}
+
+function renderSetInputs() {
+  const container = document.getElementById('setsContainer');
+  container.innerHTML = '';
+  for (let i = 1; i <= setCount; i++) {
+    const row = document.createElement('div');
+    row.className = 'set-input-row';
+    row.innerHTML = `
+      <div class="set-num-label">${i}</div>
+      <input type="number" class="inp" placeholder="Повт" id="reps_${i}" style="flex:1" value="">
+      <input type="number" class="inp" placeholder="кг" id="weight_${i}" style="flex:1" value="">
+      ${setCount > 1 ? `<button class="btn-remove" onclick="removeSet(${i})">×</button>` : ''}
+    `;
+    container.appendChild(row);
+  }
+}
+
+function addSetInput() {
+  setCount++;
+  renderSetInputs();
+}
+
+function removeSet(idx) {
+  setCount = Math.max(1, setCount - 1);
+  renderSetInputs();
+}
+
+function saveWorkout() {
+  const date = document.getElementById('newDate').value;
+  const exercise = document.getElementById('newExercise').value;
+  if (!date || !exercise) return;
+
+  const newSets = [];
+  for (let i = 1; i <= setCount; i++) {
+    const reps = parseInt(document.getElementById(`reps_${i}`)?.value);
+    const weight = parseFloat(document.getElementById(`weight_${i}`)?.value) || 0;
+    if (reps > 0) {
+      newSets.push({ date, exercise, set: i, reps, weight });
+    }
+  }
+
+  if (!newSets.length) return;
+  workoutData = [...workoutData, ...newSets];
+
+  // Save extras to localStorage
+  const stored = localStorage.getItem('ironlog_data');
+  let extra = [];
+  try { extra = stored ? JSON.parse(stored) : []; } catch(e) {}
+  localStorage.setItem('ironlog_data', JSON.stringify([...extra, ...newSets]));
+
+  // Refresh
+  init();
+  showToast('✓ Тренировка сохранена!');
+  setCount = 3;
+  initAddForm();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===================== CALC =====================
+function calcRM() {
+  const w = parseFloat(document.getElementById('calcWeight').value);
+  const r = parseInt(document.getElementById('calcReps').value);
+  const type = document.getElementById('calcEx').value;
+
+  if (!w || !r) { document.getElementById('calcRmVal').textContent = '—'; return; }
+
+  const isLower = type === 'lower';
+  const rm = isLower
+    ? Math.round(w * (1 + r / 40) * 10) / 10
+    : Math.round(w * (1 + r / 30) * 10) / 10;
+
+  document.getElementById('calcRmVal').textContent = rm + ' кг';
+  document.getElementById('calcFormula').textContent = isLower
+    ? `O'Conner: ${w} × (1 + ${r}/40)`
+    : `Epley: ${w} × (1 + ${r}/30)`;
+}
+
+// ===================== NAVIGATION =====================
+function showPage(idx) {
+  document.querySelectorAll('.page').forEach((p, i) => {
+    p.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  document.getElementById('mainContent').scrollTop = 0;
+
+  if (idx === 1) {
+    setTimeout(() => updateCharts(), 100);
+  }
+}
+
+// ===================== START =====================
+window.addEventListener('load', init);
+window.addEventListener('resize', () => { if (selectedEx) setTimeout(updateCharts, 50); });
+</script>
+</body>
+</html>
