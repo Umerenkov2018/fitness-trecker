@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>IRON LOG</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;500;600;700&display=swap');
 
@@ -562,6 +563,47 @@
   .vol-bar-track { flex: 1; height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
   .vol-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
   .vol-bar-val { font-size: 11px; color: var(--text-dim); width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* EXPORT */
+  .export-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(16,185,129,0.35);
+    background: rgba(16,185,129,0.08);
+    color: var(--green);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .export-btn:active {
+    transform: scale(0.97);
+    background: rgba(16,185,129,0.18);
+    box-shadow: 0 0 18px rgba(16,185,129,0.25);
+  }
+  .export-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .export-card {
+    background: var(--surface2);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    position: relative; overflow: hidden;
+  }
+  .export-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(16,185,129,0.5), transparent);
+  }
+  .export-desc {
+    font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px;
+  }
+  .export-desc span { color: var(--green); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -645,6 +687,21 @@
 
     <!-- PAGE 2: HISTORY -->
     <div class="page" id="page2">
+      <div class="export-card">
+        <div class="export-desc">
+          Экспорт включает <span>все тренировки</span> в формате Excel —
+          лист с историей подходов и сводный лист с лучшими 1RM по каждому упражнению.
+        </div>
+        <button class="export-btn" onclick="exportToExcel()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="11" x2="12" y2="17"/>
+            <polyline points="9 14 12 17 15 14"/>
+          </svg>
+          Экспортировать в Excel
+        </button>
+      </div>
       <div class="filter-row" id="histFilter"></div>
       <div id="historyList"></div>
     </div>
@@ -1212,6 +1269,125 @@ function showPage(idx) {
   if (idx === 1) {
     setTimeout(() => updateCharts(), 100);
   }
+}
+
+// ===================== EXPORT TO EXCEL =====================
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // ---- Sheet 1: Full history ----
+  const histHeaders = ['Дата', 'Упражнение', 'Тип (верх/низ)', 'Подход №', 'Повторения', 'Вес (кг)', '1RM (кг)', 'Формула 1RM'];
+  const histRows = workoutData.map(d => {
+    const isLower = LOWER_BODY.includes(d.exercise);
+    const rm = d.weight > 0 ? calc1RM(d.weight, d.reps, d.exercise) : '—';
+    return [
+      d.date,
+      d.exercise,
+      isLower ? 'Низ тела' : 'Верх тела',
+      d.set,
+      d.reps,
+      d.weight,
+      rm,
+      isLower ? "O'Conner: w×(1+r/40)" : 'Epley: w×(1+r/30)'
+    ];
+  });
+
+  const wsHist = XLSX.utils.aoa_to_sheet([histHeaders, ...histRows]);
+
+  // Column widths
+  wsHist['!cols'] = [
+    { wch: 12 }, { wch: 28 }, { wch: 12 }, { wch: 10 },
+    { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 22 }
+  ];
+
+  // Style header row
+  const headerStyle = {
+    font: { bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { fgColor: { rgb: '1A1A35' } },
+    alignment: { horizontal: 'center' }
+  };
+  histHeaders.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (wsHist[cellRef]) wsHist[cellRef].s = headerStyle;
+  });
+
+  XLSX.utils.book_append_sheet(wb, wsHist, 'История тренировок');
+
+  // ---- Sheet 2: 1RM Summary ----
+  const exs = getExercises();
+  const rmHeaders = ['Упражнение', 'Тип', 'Формула', 'Лучший вес (кг)', 'Повт при лучшем', 'Расчётный 1RM (кг)', 'Дата рекорда'];
+
+  const rmRows = exs.map(ex => {
+    const isLower = LOWER_BODY.includes(ex);
+    const sets = workoutData.filter(d => d.exercise === ex && d.weight > 0);
+    if (!sets.length) return [ex, isLower ? 'Низ тела' : 'Верх тела', isLower ? "O'Conner" : 'Epley', '—', '—', '—', '—'];
+
+    let bestRm = 0, bestSet = null;
+    sets.forEach(s => {
+      const rm = calc1RM(s.weight, s.reps, ex);
+      if (rm > bestRm) { bestRm = rm; bestSet = s; }
+    });
+
+    return [
+      ex,
+      isLower ? 'Низ тела' : 'Верх тела',
+      isLower ? "O'Conner: w×(1+r/40)" : 'Epley: w×(1+r/30)',
+      bestSet.weight,
+      bestSet.reps,
+      bestRm,
+      bestSet.date
+    ];
+  });
+
+  const wsRm = XLSX.utils.aoa_to_sheet([rmHeaders, ...rmRows]);
+  wsRm['!cols'] = [
+    { wch: 28 }, { wch: 12 }, { wch: 24 }, { wch: 16 },
+    { wch: 16 }, { wch: 18 }, { wch: 14 }
+  ];
+
+  rmHeaders.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (wsRm[cellRef]) wsRm[cellRef].s = headerStyle;
+  });
+
+  XLSX.utils.book_append_sheet(wb, wsRm, 'Рекорды 1RM');
+
+  // ---- Sheet 3: Per-exercise summary ----
+  const summHeaders = ['Упражнение', 'Всего подходов', 'Всего повторений', 'Суммарный объём (кг×повт)', 'Лучший 1RM (кг)', 'Первая тренировка', 'Последняя тренировка'];
+  const summRows = exs.map(ex => {
+    const sets = workoutData.filter(d => d.exercise === ex);
+    const dates = sets.map(d => d.date).sort();
+    const totalReps = sets.reduce((s, d) => s + d.reps, 0);
+    const totalVol = sets.reduce((s, d) => s + d.weight * d.reps, 0);
+    const bestRm = getBest1RM(ex);
+    return [
+      ex,
+      sets.length,
+      totalReps,
+      Math.round(totalVol),
+      bestRm || '—',
+      dates[0] || '—',
+      dates[dates.length - 1] || '—'
+    ];
+  });
+
+  const wsSumm = XLSX.utils.aoa_to_sheet([summHeaders, ...summRows]);
+  wsSumm['!cols'] = [
+    { wch: 28 }, { wch: 16 }, { wch: 18 }, { wch: 24 },
+    { wch: 16 }, { wch: 16 }, { wch: 18 }
+  ];
+  summHeaders.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (wsSumm[cellRef]) wsSumm[cellRef].s = headerStyle;
+  });
+
+  XLSX.utils.book_append_sheet(wb, wsSumm, 'Сводка');
+
+  // Export
+  const today = new Date().toISOString().split('T')[0];
+  const filename = `IronLog_${today}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast('📥 Экспорт в Excel готов!');
 }
 
 // ===================== START =====================
