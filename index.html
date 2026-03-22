@@ -705,7 +705,7 @@
       <div class="section-title">Выберите упражнение</div>
       <div class="ex-scroll" id="exChips"></div>
 
-      <div class="section-title">1RM прогресс</div>
+      <div class="section-title" id="rmTitle">1RM прогресс</div>
       <div class="card">
         <div class="legend" id="rmLegend"></div>
         <div class="chart-wrap">
@@ -714,14 +714,14 @@
         <div class="chart-label" id="rmFormula"></div>
       </div>
 
-      <div class="section-title">Максимальный вес (кг)</div>
+      <div class="section-title" id="weightTitle">Максимальный вес (кг)</div>
       <div class="card">
         <div class="chart-wrap">
           <canvas id="weightChart" height="160"></canvas>
         </div>
       </div>
 
-      <div class="section-title">Объём за тренировку (кг × повт)</div>
+      <div class="section-title" id="volumeTitle">Объём за тренировку (кг × повт)</div>
       <div class="card">
         <div class="chart-wrap">
           <canvas id="volumeChart" height="160"></canvas>
@@ -868,6 +868,8 @@
 // ===================== DATA =====================
 const LOWER_BODY = ['Приседания', 'Приседания в гакк', 'Разгибания ног', 'Становая тяга', 'Выпады', 'Планка (минут)'];
 const UPPER_BODY = ['Жим лежа', 'Подтягивания', 'Отжимания на брусьях', 'Тяга блока горизонтальная', 'Тяга блока вертикальная', 'Бицепс'];
+const ALL_EXERCISES = [...UPPER_BODY, ...LOWER_BODY];
+const BODYWEIGHT_EX = ['Подтягивания', 'Отжимания на брусьях'];
 
 const EX_COLORS = {
   'Жим лежа': '#3B82F6',
@@ -918,7 +920,8 @@ function calc1RM(weight, reps, exercise) {
 }
 
 function getBest1RM(exercise) {
-  const sets = workoutData.filter(d => d.exercise === exercise && d.weight > 0);
+  const isBodyweight = BODYWEIGHT_EX.includes(exercise);
+  const sets = workoutData.filter(d => d.exercise === exercise && (isBodyweight || d.weight > 0));
   if (!sets.length) return 0;
   return Math.max(...sets.map(s => calc1RM(s.weight, s.reps, exercise)));
 }
@@ -953,7 +956,7 @@ function init() {
   buildHistory();
   initAddForm();
 
-  selectedEx = exs[0];
+  selectedEx = ALL_EXERCISES[0];
   updateCharts();
 }
 
@@ -1015,11 +1018,15 @@ function buildAllRM() {
   container.innerHTML = exs.map((ex, i) => {
     const rm = getBest1RM(ex);
     const isLower = LOWER_BODY.includes(ex);
+    const isBW = BODYWEIGHT_EX.includes(ex);
+    const hasWeight = workoutData.some(d => d.exercise === ex && d.weight > 0);
+    const rmLabel = rm > 0 ? (isBW && !hasWeight ? rm + ' повт' : rm + ' кг') : '—';
+    const typeLabel = isBW && !hasWeight ? '🏋️ Собств. вес' : isLower ? '🦵 O\'Conner' : '💪 Epley';
     return `
       <div class="rm-card">
         <div class="rm-ex">${ex}</div>
-        <div class="rm-val" style="color:${colorVals[i%colorVals.length]}">${rm > 0 ? rm + ' кг' : '—'}</div>
-        <div class="rm-type">${isLower ? '🦵 O\'Conner' : '💪 Epley'}</div>
+        <div class="rm-val" style="color:${colorVals[i%colorVals.length]}">${rmLabel}</div>
+        <div class="rm-type">${typeLabel}</div>
       </div>
     `;
   }).join('');
@@ -1028,8 +1035,7 @@ function buildAllRM() {
 // ===================== EXERCISE CHIPS =====================
 function buildExChips() {
   const container = document.getElementById('exChips');
-  const exs = getExercises();
-  container.innerHTML = exs.map((ex, i) => `
+  container.innerHTML = ALL_EXERCISES.map((ex, i) => `
     <div class="ex-chip ${i===0?'active':''}" onclick="selectEx('${ex}',this)">${ex}</div>
   `).join('');
 }
@@ -1047,22 +1053,36 @@ function updateCharts() {
   const ex = selectedEx;
   const color = EX_COLORS[ex] || '#8B5CF6';
   const isLower = LOWER_BODY.includes(ex);
+  const isBodyweight = BODYWEIGHT_EX.includes(ex);
 
   // Get per-day data
   const days = [...new Set(workoutData.filter(d => d.exercise === ex).map(d => d.date))].sort();
+
+  // 1RM: for bodyweight exercises include weight=0 sets (calc1RM returns reps for weight=0)
   const rm1Data = days.map(date => {
-    const sets = workoutData.filter(d => d.date === date && d.exercise === ex && d.weight > 0);
+    const sets = workoutData.filter(d => d.date === date && d.exercise === ex && (isBodyweight || d.weight > 0));
     if (!sets.length) return null;
     return Math.max(...sets.map(s => calc1RM(s.weight, s.reps, ex)));
   }).filter(v => v !== null);
 
+  // Max weight: for bodyweight use max reps instead
   const maxWeightData = days.map(date => {
     const sets = workoutData.filter(d => d.date === date && d.exercise === ex);
+    if (isBodyweight) {
+      const hasBW = sets.some(s => s.weight === 0);
+      const hasWeighted = sets.some(s => s.weight > 0);
+      if (hasBW && !hasWeighted) return Math.max(...sets.map(s => s.reps));
+    }
     return Math.max(...sets.map(s => s.weight));
   });
 
+  // Volume: for bodyweight use total reps when no weight
   const volumeData = days.map(date => {
     const sets = workoutData.filter(d => d.date === date && d.exercise === ex);
+    if (isBodyweight) {
+      const allBW = sets.every(s => s.weight === 0);
+      if (allBW) return sets.reduce((s, d) => s + d.reps, 0);
+    }
     return sets.reduce((s, d) => s + d.weight * d.reps, 0);
   });
 
@@ -1071,11 +1091,26 @@ function updateCharts() {
     return `${parseInt(day)}.${parseInt(m)}`;
   });
 
-  const formula = isLower ? "Формула O'Conner (низ тела): 1RM = вес × (1 + повт/40)" : "Формула Epley (верх тела): 1RM = вес × (1 + повт/30)";
+  // Update section titles dynamically for bodyweight
+  const allBWdays = isBodyweight && days.length > 0 && days.every(date => {
+    const sets = workoutData.filter(d => d.date === date && d.exercise === ex);
+    return sets.every(s => s.weight === 0);
+  });
+
+  document.getElementById('rmTitle').textContent = isBodyweight && allBWdays ? 'Прогресс (макс. повторений)' : '1RM прогресс';
+  document.getElementById('weightTitle').textContent = isBodyweight && allBWdays ? 'Максимальное количество повторений' : 'Максимальный вес (кг)';
+  document.getElementById('volumeTitle').textContent = isBodyweight && allBWdays ? 'Объём за тренировку (повт)' : 'Объём за тренировку (кг × повт)';
+
+  const formula = isBodyweight && allBWdays
+    ? 'Упражнение с собственным весом — отображаются повторения'
+    : isLower ? "Формула O'Conner (низ тела): 1RM = вес × (1 + повт/40)" : "Формула Epley (верх тела): 1RM = вес × (1 + повт/30)";
   document.getElementById('rmFormula').textContent = formula;
+
+  const bestRM = rm1Data.length ? Math.max(...rm1Data) : 0;
+  const bestLabel = isBodyweight && allBWdays ? `Макс. повт: ${bestRM}` : `Лучший 1RM: ${bestRM.toFixed(1)} кг`;
   document.getElementById('rmLegend').innerHTML = `
     <div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${ex}</div>
-    <div class="legend-item" style="margin-left:auto;font-size:10px;color:${color}">Лучший 1RM: ${Math.max(...rm1Data).toFixed(1)} кг</div>
+    ${rm1Data.length ? `<div class="legend-item" style="margin-left:auto;font-size:10px;color:${color}">${bestLabel}</div>` : ''}
   `;
 
   drawChart('rmChart', labels, rm1Data, color, true);
@@ -1085,10 +1120,11 @@ function updateCharts() {
 
 function drawChart(canvasId, labels, data, color, fill) {
   const canvas = document.getElementById(canvasId);
-  const dpr = window.devicePixelRatio || 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const rect = canvas.parentElement.getBoundingClientRect();
-  const W = rect.width - 16;
+  const W = Math.floor(rect.width) - 16;
   const H = parseInt(canvas.getAttribute('height'));
+  if (W <= 0) return;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width = W + 'px';
@@ -1339,7 +1375,7 @@ function showPage(idx) {
   document.getElementById('mainContent').scrollTop = 0;
 
   if (idx === 1) {
-    setTimeout(() => updateCharts(), 100);
+    requestAnimationFrame(() => requestAnimationFrame(() => updateCharts()));
   }
 }
 
@@ -1548,7 +1584,7 @@ function importFromFile(input) {
 
 // ===================== START =====================
 window.addEventListener('load', init);
-window.addEventListener('resize', () => { if (selectedEx) setTimeout(updateCharts, 50); });
+window.addEventListener('resize', () => { if (selectedEx) requestAnimationFrame(() => updateCharts()); });
 </script>
 </body>
 </html>
