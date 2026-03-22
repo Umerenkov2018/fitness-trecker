@@ -805,6 +805,10 @@
         <div class="input-label">ПОДХОДЫ</div>
         <div class="sets-container" id="setsContainer"></div>
         <button class="btn btn-add-set btn-sm" onclick="addSetInput()">+ Добавить подход</button>
+        <div class="input-group" style="margin-top:12px;margin-bottom:0">
+          <div class="input-label">КОММЕНТАРИЙ К ТРЕНИРОВКЕ</div>
+          <textarea class="inp" id="workoutComment" rows="3" placeholder="Заметки о тренировке..." style="resize:none;line-height:1.4"></textarea>
+        </div>
       </div>
 
       <button class="btn btn-primary" onclick="saveWorkout()" style="margin-top:4px">
@@ -921,6 +925,11 @@ let workoutData = [{"date":"2024-11-23","exercise":"Жим лежа","set":1,"re
 let bodyWeightData = [];
 const bwStored = localStorage.getItem('ironlog_bodyweight');
 if (bwStored) { try { bodyWeightData = JSON.parse(bwStored); } catch(e) {} }
+
+// ===================== WORKOUT COMMENTS =====================
+let workoutComments = {};
+const commStored = localStorage.getItem('ironlog_comments');
+if (commStored) { try { workoutComments = JSON.parse(commStored); } catch(e) {} }
 
 // Load from localStorage (full data). Legacy: small stored = delta, merge once and re-save full.
 const stored = localStorage.getItem('ironlog_data');
@@ -1275,9 +1284,12 @@ function buildHistory() {
   }
 
   container.innerHTML = days.map(date => {
-    const sets = workoutData.filter(d => d.date === date && (!histExFilter || d.exercise === histExFilter));
+    const sets = workoutData
+      .filter(d => d.date === date && (!histExFilter || d.exercise === histExFilter))
+      .sort((a, b) => a.exercise.localeCompare(b.exercise, 'ru') || a.set - b.set);
     if (!sets.length) return '';
     const exNames = [...new Set(sets.map(d => d.exercise))];
+    const comment = workoutComments[date] || '';
     return `
       <div class="workout-day">
         <div class="workout-day-header" onclick="toggleDay(this)">
@@ -1296,10 +1308,25 @@ function buildHistory() {
               <div class="set-weight">${s.weight > 0 ? s.weight + 'кг' : 'б/в'}</div>
             </div>
           `).join('')}
+          <div class="workout-comment-block" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px">
+            <div class="input-label" style="margin-bottom:4px">КОММЕНТАРИЙ</div>
+            <textarea class="inp" rows="2" style="resize:none;font-size:12px;line-height:1.4" placeholder="Добавить заметку..."
+              onblur="saveHistoryComment('${date}', this.value)">${comment}</textarea>
+          </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+function saveHistoryComment(date, value) {
+  const v = value.trim();
+  if (v) {
+    workoutComments[date] = v;
+  } else {
+    delete workoutComments[date];
+  }
+  localStorage.setItem('ironlog_comments', JSON.stringify(workoutComments));
 }
 
 function setHistFilter(ex, el) {
@@ -1321,6 +1348,8 @@ function initAddForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('newDate').value = today;
   document.getElementById('bwDate').value = today;
+  const commentEl = document.getElementById('workoutComment');
+  if (commentEl) commentEl.value = '';
   renderSetInputs();
 }
 
@@ -1367,6 +1396,12 @@ function saveWorkout() {
   if (!newSets.length) return;
   workoutData = [...workoutData, ...newSets];
   localStorage.setItem('ironlog_data', JSON.stringify(workoutData));
+
+  const comment = (document.getElementById('workoutComment')?.value || '').trim();
+  if (comment) {
+    workoutComments[date] = comment;
+    localStorage.setItem('ironlog_comments', JSON.stringify(workoutComments));
+  }
 
   // Refresh
   init();
@@ -1542,7 +1577,9 @@ function exportToExcel() {
 function clearAllWorkouts() {
   if (!confirm('Удалить все тренировки? Это действие нельзя отменить.')) return;
   workoutData = [];
+  workoutComments = {};
   localStorage.removeItem('ironlog_data');
+  localStorage.removeItem('ironlog_comments');
   init();
   showToast('Все тренировки удалены');
 }
