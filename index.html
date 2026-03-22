@@ -1157,13 +1157,13 @@ function updateCharts() {
 function drawChart(canvasId, labels, data, color, fill) {
   const canvas = document.getElementById(canvasId);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const W = Math.floor(rect.width) - 16;
+  // offsetWidth is reliable after layout; subtract chart-wrap's 8px horizontal padding ×2
+  const W = canvas.parentElement.offsetWidth - 16;
   const H = parseInt(canvas.getAttribute('height'));
   if (W <= 0) return;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
+  // Do NOT set canvas.style.width — CSS `width: 100% !important` keeps it filling the container
   canvas.style.height = H + 'px';
 
   const ctx = canvas.getContext('2d');
@@ -1412,10 +1412,10 @@ function showPage(idx) {
   document.getElementById('mainContent').scrollTop = 0;
 
   if (idx === 1) {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    setTimeout(() => {
       buildBodyWeightChart();
       updateCharts();
-    }));
+    }, 50);
   }
 }
 
