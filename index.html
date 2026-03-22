@@ -604,6 +604,50 @@
     font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px;
   }
   .export-desc span { color: var(--green); font-weight: 600; }
+
+  .import-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(6,182,212,0.35);
+    background: rgba(6,182,212,0.08);
+    color: #06B6D4;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .import-btn:active {
+    transform: scale(0.97);
+    background: rgba(6,182,212,0.18);
+    box-shadow: 0 0 18px rgba(6,182,212,0.25);
+  }
+  .import-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  .clear-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(236,72,153,0.35);
+    background: rgba(236,72,153,0.08);
+    color: var(--pink);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .clear-btn:active {
+    transform: scale(0.97);
+    background: rgba(236,72,153,0.18);
+    box-shadow: 0 0 18px rgba(236,72,153,0.25);
+  }
+  .clear-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -701,6 +745,23 @@
           </svg>
           Экспортировать в Excel
         </button>
+        <button class="import-btn" onclick="document.getElementById('importFile').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="17" x2="12" y2="11"/>
+            <polyline points="9 14 12 11 15 14"/>
+          </svg>
+          Загрузить из файла
+        </button>
+        <input type="file" id="importFile" accept=".xlsx,.xls,.json" style="display:none" onchange="importFromFile(this)">
+        <button class="clear-btn" onclick="clearAllWorkouts()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          Удалить все тренировки
+        </button>
       </div>
       <div class="filter-row" id="histFilter"></div>
       <div id="historyList"></div>
@@ -719,11 +780,15 @@
           <select class="inp" id="newExercise">
             <option value="Жим лежа">Жим лежа</option>
             <option value="Приседания">Приседания</option>
+            <option value="Приседания в гакк">Приседания в гакк</option>
+            <option value="Разгибания ног">Разгибания ног</option>
             <option value="Становая тяга">Становая тяга</option>
+            <option value="Выпады">Выпады</option>
             <option value="Отжимания на брусьях">Отжимания на брусьях</option>
             <option value="Тяга блока горизонтальная">Тяга блока горизонтальная</option>
             <option value="Тяга блока вертикальная">Тяга блока вертикальная</option>
             <option value="Бицепс">Бицепс</option>
+            <option value="Планка (минут)">Планка (минут)</option>
           </select>
         </div>
         <div class="input-label">ПОДХОДЫ</div>
@@ -800,27 +865,37 @@
 
 <script>
 // ===================== DATA =====================
-const LOWER_BODY = ['Приседания', 'Становая тяга'];
+const LOWER_BODY = ['Приседания', 'Приседания в гакк', 'Разгибания ног', 'Становая тяга', 'Выпады', 'Планка (минут)'];
 const UPPER_BODY = ['Жим лежа', 'Отжимания на брусьях', 'Тяга блока горизонтальная', 'Тяга блока вертикальная', 'Бицепс'];
 
 const EX_COLORS = {
   'Жим лежа': '#3B82F6',
   'Приседания': '#8B5CF6',
+  'Приседания в гакк': '#A78BFA',
+  'Разгибания ног': '#C4B5FD',
   'Становая тяга': '#EC4899',
+  'Выпады': '#F472B6',
   'Отжимания на брусьях': '#10B981',
   'Тяга блока горизонтальная': '#F59E0B',
   'Тяга блока вертикальная': '#06B6D4',
-  'Бицепс': '#F97316'
+  'Бицепс': '#F97316',
+  'Планка (минут)': '#14B8A6'
 };
 
 let workoutData = [{"date":"2024-11-23","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-23","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-23","exercise":"Приседания","set":1,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Приседания","set":2,"reps":10,"weight":20},{"date":"2024-11-23","exercise":"Приседания","set":3,"reps":10,"weight":20},{"date":"2024-11-28","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-28","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-28","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-28","exercise":"Приседания","set":1,"reps":10,"weight":15},{"date":"2024-11-28","exercise":"Приседания","set":2,"reps":10,"weight":15},{"date":"2024-11-30","exercise":"Жим лежа","set":1,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Жим лежа","set":2,"reps":10,"weight":30},{"date":"2024-11-30","exercise":"Жим лежа","set":3,"reps":10,"weight":35},{"date":"2024-11-30","exercise":"Жим лежа","set":4,"reps":10,"weight":40},{"date":"2024-11-30","exercise":"Приседания","set":1,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Приседания","set":2,"reps":10,"weight":20},{"date":"2024-11-30","exercise":"Приседания","set":3,"reps":10,"weight":20},{"date":"2024-12-04","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-04","exercise":"Жим лежа","set":3,"reps":12,"weight":35},{"date":"2024-12-04","exercise":"Жим лежа","set":4,"reps":12,"weight":40},{"date":"2024-12-04","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-04","exercise":"Приседания","set":3,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-07","exercise":"Жим лежа","set":3,"reps":12,"weight":35},{"date":"2024-12-07","exercise":"Жим лежа","set":4,"reps":12,"weight":40},{"date":"2024-12-07","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-07","exercise":"Приседания","set":3,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-10","exercise":"Жим лежа","set":3,"reps":12,"weight":40},{"date":"2024-12-10","exercise":"Жим лежа","set":4,"reps":12,"weight":45},{"date":"2024-12-10","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2024-12-10","exercise":"Приседания","set":3,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Жим лежа","set":1,"reps":12,"weight":20},{"date":"2024-12-14","exercise":"Жим лежа","set":2,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Жим лежа","set":3,"reps":12,"weight":40},{"date":"2024-12-14","exercise":"Жим лежа","set":4,"reps":12,"weight":45},{"date":"2024-12-14","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-14","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2024-12-14","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2024-12-17","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-17","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-17","exercise":"Жим лежа","set":3,"reps":12,"weight":45},{"date":"2024-12-17","exercise":"Жим лежа","set":4,"reps":8,"weight":50},{"date":"2024-12-17","exercise":"Приседания","set":1,"reps":12,"weight":20},{"date":"2024-12-17","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2024-12-17","exercise":"Приседания","set":3,"reps":14,"weight":40},{"date":"2024-12-17","exercise":"Приседания","set":4,"reps":10,"weight":45},{"date":"2024-12-21","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-21","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-21","exercise":"Жим лежа","set":3,"reps":12,"weight":45},{"date":"2024-12-21","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2024-12-21","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2024-12-21","exercise":"Приседания","set":3,"reps":12,"weight":45},{"date":"2024-12-24","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-24","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-24","exercise":"Жим лежа","set":3,"reps":12,"weight":50},{"date":"2024-12-24","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2024-12-24","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2024-12-24","exercise":"Приседания","set":3,"reps":20,"weight":35},{"date":"2024-12-24","exercise":"Приседания","set":4,"reps":12,"weight":40},{"date":"2024-12-28","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2024-12-28","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2024-12-28","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2024-12-28","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2024-12-28","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2024-12-28","exercise":"Приседания","set":3,"reps":16,"weight":40},{"date":"2025-01-03","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-03","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2025-01-03","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2025-01-03","exercise":"Приседания","set":1,"reps":20,"weight":20},{"date":"2025-01-03","exercise":"Приседания","set":2,"reps":20,"weight":30},{"date":"2025-01-03","exercise":"Приседания","set":3,"reps":20,"weight":40},{"date":"2025-01-07","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-07","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-07","exercise":"Жим лежа","set":3,"reps":11,"weight":55},{"date":"2025-01-07","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-07","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-07","exercise":"Приседания","set":3,"reps":18,"weight":40},{"date":"2025-01-11","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-11","exercise":"Жим лежа","set":2,"reps":12,"weight":40},{"date":"2025-01-11","exercise":"Жим лежа","set":3,"reps":15,"weight":50},{"date":"2025-01-11","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-11","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-11","exercise":"Приседания","set":3,"reps":12,"weight":40},{"date":"2025-01-14","exercise":"Жим лежа","set":1,"reps":12,"weight":30},{"date":"2025-01-14","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-14","exercise":"Жим лежа","set":3,"reps":12,"weight":55},{"date":"2025-01-14","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-14","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-14","exercise":"Приседания","set":3,"reps":18,"weight":40},{"date":"2025-01-18","exercise":"Жим лежа","set":1,"reps":12,"weight":35},{"date":"2025-01-18","exercise":"Жим лежа","set":2,"reps":12,"weight":45},{"date":"2025-01-18","exercise":"Жим лежа","set":3,"reps":14,"weight":55},{"date":"2025-01-18","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-18","exercise":"Приседания","set":2,"reps":15,"weight":40},{"date":"2025-01-18","exercise":"Приседания","set":3,"reps":15,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":2,"reps":10,"weight":40},{"date":"2025-01-21","exercise":"Жим лежа","set":3,"reps":10,"weight":50},{"date":"2025-01-21","exercise":"Приседания","set":1,"reps":20,"weight":30},{"date":"2025-01-21","exercise":"Приседания","set":2,"reps":20,"weight":40},{"date":"2025-01-21","exercise":"Приседания","set":3,"reps":20,"weight":40},{"date":"2025-01-25","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-25","exercise":"Жим лежа","set":2,"reps":12,"weight":50},{"date":"2025-01-25","exercise":"Жим лежа","set":3,"reps":8,"weight":55},{"date":"2025-01-25","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-01-25","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2025-01-25","exercise":"Приседания","set":3,"reps":8,"weight":45},{"date":"2025-01-28","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-01-28","exercise":"Жим лежа","set":2,"reps":12,"weight":50},{"date":"2025-01-28","exercise":"Жим лежа","set":3,"reps":8,"weight":55},{"date":"2025-01-28","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-01-28","exercise":"Приседания","set":2,"reps":8,"weight":40},{"date":"2025-01-28","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2025-02-01","exercise":"Жим лежа","set":1,"reps":6,"weight":45},{"date":"2025-02-01","exercise":"Жим лежа","set":2,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":3,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":4,"reps":6,"weight":55},{"date":"2025-02-01","exercise":"Жим лежа","set":5,"reps":8,"weight":55},{"date":"2025-02-01","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-02-01","exercise":"Приседания","set":2,"reps":12,"weight":40},{"date":"2025-02-01","exercise":"Приседания","set":3,"reps":12,"weight":40},{"date":"2025-02-04","exercise":"Жим лежа","set":1,"reps":12,"weight":40},{"date":"2025-02-04","exercise":"Жим лежа","set":2,"reps":8,"weight":50},{"date":"2025-02-04","exercise":"Жим лежа","set":3,"reps":8,"weight":50},{"date":"2025-02-04","exercise":"Приседания","set":1,"reps":12,"weight":30},{"date":"2025-02-04","exercise":"Приседания","set":2,"reps":8,"weight":40},{"date":"2025-02-04","exercise":"Приседания","set":3,"reps":10,"weight":40},{"date":"2025-02-08","exercise":"Жим лежа","set":1,"reps":6,"weight":47.5},{"date":"2025-02-08","exercise":"Жим лежа","set":2,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":3,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":4,"reps":5,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":5,"reps":10,"weight":57.5},{"date":"2025-02-08","exercise":"Жим лежа","set":6,"reps":5,"weight":60},{"date":"2025-02-08","exercise":"Приседания","set":1,"reps":12,"weight":32.5},{"date":"2025-02-08","exercise":"Приседания","set":2,"reps":12,"weight":42.5},{"date":"2025-02-08","exercise":"Приседания","set":3,"reps":15,"weight":42.5},{"date":"2025-02-15","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-02-15","exercise":"Жим лежа","set":2,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":3,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":4,"reps":5,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":5,"reps":8,"weight":60},{"date":"2025-02-15","exercise":"Жим лежа","set":6,"reps":3,"weight":65},{"date":"2025-02-15","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-02-15","exercise":"Приседания","set":2,"reps":12,"weight":45},{"date":"2025-02-15","exercise":"Приседания","set":3,"reps":12,"weight":45},{"date":"2025-02-15","exercise":"Приседания","set":4,"reps":12,"weight":45},{"date":"2025-02-16","exercise":"Жим лежа","set":1,"reps":8,"weight":55},{"date":"2025-02-16","exercise":"Жим лежа","set":2,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":3,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":4,"reps":5,"weight":62.5},{"date":"2025-02-16","exercise":"Жим лежа","set":5,"reps":8,"weight":62.5},{"date":"2025-02-16","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-02-16","exercise":"Приседания","set":2,"reps":14,"weight":45},{"date":"2025-02-16","exercise":"Приседания","set":3,"reps":12,"weight":46},{"date":"2025-02-16","exercise":"Приседания","set":4,"reps":12,"weight":46},{"date":"2025-03-01","exercise":"Жим лежа","set":1,"reps":8,"weight":55},{"date":"2025-03-01","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Жим лежа","set":5,"reps":5,"weight":65},{"date":"2025-03-01","exercise":"Приседания","set":1,"reps":12,"weight":35},{"date":"2025-03-01","exercise":"Приседания","set":2,"reps":12,"weight":47.5},{"date":"2025-03-01","exercise":"Приседания","set":3,"reps":12,"weight":47.5},{"date":"2025-03-01","exercise":"Приседания","set":4,"reps":12,"weight":47.5},{"date":"2025-03-11","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Жим лежа","set":2,"reps":5,"weight":60},{"date":"2025-03-11","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-11","exercise":"Жим лежа","set":4,"reps":2,"weight":65},{"date":"2025-03-11","exercise":"Жим лежа","set":5,"reps":2,"weight":67.5},{"date":"2025-03-11","exercise":"Приседания","set":1,"reps":10,"weight":40},{"date":"2025-03-11","exercise":"Приседания","set":2,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Приседания","set":3,"reps":8,"weight":50},{"date":"2025-03-11","exercise":"Приседания","set":4,"reps":12,"weight":50},{"date":"2025-03-15","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-15","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-15","exercise":"Жим лежа","set":5,"reps":11,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-03-18","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":3,"reps":12,"weight":50},{"date":"2025-03-18","exercise":"Приседания","set":4,"reps":14,"weight":50},{"date":"2025-03-22","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-22","exercise":"Жим лежа","set":2,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":4,"reps":5,"weight":65},{"date":"2025-03-22","exercise":"Жим лежа","set":5,"reps":1,"weight":70},{"date":"2025-03-22","exercise":"Жим лежа","set":6,"reps":1,"weight":70},{"date":"2025-03-23","exercise":"Жим лежа","set":1,"reps":6,"weight":60},{"date":"2025-03-23","exercise":"Жим лежа","set":2,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":3,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-03-23","exercise":"Жим лежа","set":5,"reps":7,"weight":65},{"date":"2025-04-01","exercise":"Приседания","set":1,"reps":12,"weight":45},{"date":"2025-04-01","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-01","exercise":"Приседания","set":3,"reps":12,"weight":50},{"date":"2025-04-01","exercise":"Приседания","set":4,"reps":10,"weight":50},{"date":"2025-04-12","exercise":"Жим лежа","set":1,"reps":9,"weight":50},{"date":"2025-04-12","exercise":"Жим лежа","set":2,"reps":10,"weight":60},{"date":"2025-04-12","exercise":"Жим лежа","set":3,"reps":7,"weight":65},{"date":"2025-04-12","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-04-15","exercise":"Приседания","set":1,"reps":12,"weight":45},{"date":"2025-04-15","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-15","exercise":"Приседания","set":3,"reps":6,"weight":50},{"date":"2025-04-16","exercise":"Жим лежа","set":1,"reps":9,"weight":50},{"date":"2025-04-16","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-04-16","exercise":"Жим лежа","set":3,"reps":8,"weight":65},{"date":"2025-04-16","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-04-26","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-04-26","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-04-26","exercise":"Жим лежа","set":3,"reps":10,"weight":65},{"date":"2025-04-26","exercise":"Жим лежа","set":4,"reps":9,"weight":65},{"date":"2025-04-29","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-04-29","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-04-29","exercise":"Приседания","set":3,"reps":15,"weight":50},{"date":"2025-05-04","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-04","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-04","exercise":"Жим лежа","set":3,"reps":5,"weight":65},{"date":"2025-05-04","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-05-11","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-11","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-11","exercise":"Жим лежа","set":3,"reps":8,"weight":65},{"date":"2025-05-11","exercise":"Жим лежа","set":4,"reps":7,"weight":65},{"date":"2025-05-13","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-05-13","exercise":"Приседания","set":2,"reps":15,"weight":50},{"date":"2025-05-13","exercise":"Приседания","set":3,"reps":15,"weight":50},{"date":"2025-05-17","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-17","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-17","exercise":"Жим лежа","set":3,"reps":9,"weight":65},{"date":"2025-05-17","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-05-27","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-05-27","exercise":"Приседания","set":2,"reps":15,"weight":50},{"date":"2025-05-27","exercise":"Приседания","set":3,"reps":18,"weight":50},{"date":"2025-05-31","exercise":"Жим лежа","set":1,"reps":6,"weight":50},{"date":"2025-05-31","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-05-31","exercise":"Жим лежа","set":3,"reps":11,"weight":65},{"date":"2025-05-31","exercise":"Жим лежа","set":4,"reps":6,"weight":65},{"date":"2025-06-01","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-06-01","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-06-01","exercise":"Жим лежа","set":3,"reps":10,"weight":65},{"date":"2025-06-01","exercise":"Жим лежа","set":4,"reps":6,"weight":70},{"date":"2025-06-10","exercise":"Приседания","set":1,"reps":8,"weight":45},{"date":"2025-06-10","exercise":"Приседания","set":2,"reps":10,"weight":55},{"date":"2025-06-10","exercise":"Приседания","set":3,"reps":15,"weight":55},{"date":"2025-06-11","exercise":"Приседания","set":1,"reps":8,"weight":50},{"date":"2025-06-11","exercise":"Приседания","set":2,"reps":10,"weight":60},{"date":"2025-06-11","exercise":"Приседания","set":3,"reps":10,"weight":60},{"date":"2025-06-11","exercise":"Приседания","set":4,"reps":10,"weight":60},{"date":"2025-07-12","exercise":"Жим лежа","set":1,"reps":8,"weight":50},{"date":"2025-07-12","exercise":"Жим лежа","set":2,"reps":6,"weight":60},{"date":"2025-07-12","exercise":"Жим лежа","set":3,"reps":9,"weight":65},{"date":"2025-07-15","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-07-15","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-07-15","exercise":"Приседания","set":3,"reps":18,"weight":60},{"date":"2025-07-26","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-07-26","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-07-26","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-07-26","exercise":"Жим лежа","set":4,"reps":7,"weight":70},{"date":"2025-07-29","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-07-29","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-07-29","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-07-29","exercise":"Приседания","set":4,"reps":8,"weight":65},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":3,"reps":12,"weight":1},{"date":"2025-08-02","exercise":"Отжимания на брусьях","set":4,"reps":6,"weight":1},{"date":"2025-08-12","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-08-12","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-08-12","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-08-12","exercise":"Приседания","set":4,"reps":12,"weight":65},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":3,"reps":12,"weight":0},{"date":"2025-08-16","exercise":"Отжимания на брусьях","set":4,"reps":12,"weight":0},{"date":"2025-08-19","exercise":"Приседания","set":1,"reps":12,"weight":1},{"date":"2025-08-19","exercise":"Приседания","set":2,"reps":12,"weight":20},{"date":"2025-08-19","exercise":"Приседания","set":3,"reps":12,"weight":30},{"date":"2025-08-21","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-08-21","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-08-21","exercise":"Жим лежа","set":3,"reps":9,"weight":70},{"date":"2025-08-21","exercise":"Жим лежа","set":4,"reps":9,"weight":70},{"date":"2025-09-13","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-09-13","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-09-13","exercise":"Жим лежа","set":3,"reps":5,"weight":70},{"date":"2025-09-13","exercise":"Жим лежа","set":4,"reps":4,"weight":70},{"date":"2025-09-16","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-09-16","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-09-16","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-09-16","exercise":"Приседания","set":4,"reps":16,"weight":65},{"date":"2025-09-27","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-09-27","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-09-27","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":2,"reps":12,"weight":0},{"date":"2025-09-30","exercise":"Отжимания на брусьях","set":3,"reps":20,"weight":0},{"date":"2025-09-30","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-09-30","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-09-30","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-09-30","exercise":"Приседания","set":4,"reps":14,"weight":65},{"date":"2025-10-11","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-10-11","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-10-11","exercise":"Жим лежа","set":3,"reps":7,"weight":70},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-10-14","exercise":"Отжимания на брусьях","set":3,"reps":17,"weight":0},{"date":"2025-10-14","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-10-14","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-10-14","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-10-14","exercise":"Приседания","set":4,"reps":15,"weight":65},{"date":"2025-10-25","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-10-25","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-10-25","exercise":"Жим лежа","set":3,"reps":4,"weight":70},{"date":"2025-10-28","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-10-28","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-10-28","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-10-28","exercise":"Приседания","set":4,"reps":20,"weight":65},{"date":"2025-11-08","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-11-08","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-11-08","exercise":"Жим лежа","set":3,"reps":6,"weight":70},{"date":"2025-11-11","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-11-11","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-11-11","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-11-11","exercise":"Приседания","set":4,"reps":12,"weight":70},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-11-15","exercise":"Отжимания на брусьях","set":3,"reps":16,"weight":0},{"date":"2025-11-18","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-11-18","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-11-18","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-11-18","exercise":"Приседания","set":4,"reps":13,"weight":70},{"date":"2025-11-22","exercise":"Жим лежа","set":1,"reps":10,"weight":50},{"date":"2025-11-22","exercise":"Жим лежа","set":2,"reps":8,"weight":60},{"date":"2025-11-22","exercise":"Жим лежа","set":3,"reps":6,"weight":70},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-11-29","exercise":"Отжимания на брусьях","set":3,"reps":18,"weight":0},{"date":"2025-12-02","exercise":"Приседания","set":1,"reps":12,"weight":40},{"date":"2025-12-02","exercise":"Приседания","set":2,"reps":12,"weight":50},{"date":"2025-12-02","exercise":"Приседания","set":3,"reps":12,"weight":60},{"date":"2025-12-02","exercise":"Приседания","set":4,"reps":13,"weight":70},{"date":"2025-12-06","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-06","exercise":"Жим лежа","set":2,"reps":7,"weight":70},{"date":"2025-12-06","exercise":"Жим лежа","set":3,"reps":3,"weight":70},{"date":"2025-12-10","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2025-12-10","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2025-12-10","exercise":"Становая тяга","set":3,"reps":10,"weight":70},{"date":"2025-12-10","exercise":"Становая тяга","set":4,"reps":10,"weight":70},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2025-12-13","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2025-12-16","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-16","exercise":"Жим лежа","set":2,"reps":3,"weight":70},{"date":"2025-12-16","exercise":"Жим лежа","set":3,"reps":3,"weight":70},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":2,"reps":12,"weight":0},{"date":"2025-12-19","exercise":"Отжимания на брусьях","set":3,"reps":8,"weight":0},{"date":"2025-12-22","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2025-12-22","exercise":"Жим лежа","set":2,"reps":5,"weight":70},{"date":"2025-12-22","exercise":"Жим лежа","set":3,"reps":4,"weight":70},{"date":"2025-12-22","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2025-12-22","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2025-12-22","exercise":"Становая тяга","set":3,"reps":12,"weight":70},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":2,"reps":15,"weight":0},{"date":"2025-12-25","exercise":"Отжимания на брусьях","set":3,"reps":18,"weight":0},{"date":"2026-01-24","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2026-01-24","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2026-01-24","exercise":"Становая тяга","set":3,"reps":13,"weight":70},{"date":"2026-02-17","exercise":"Приседания","set":1,"reps":12,"weight":50},{"date":"2026-02-17","exercise":"Приседания","set":2,"reps":12,"weight":60},{"date":"2026-02-17","exercise":"Приседания","set":3,"reps":13,"weight":70},{"date":"2026-02-21","exercise":"Жим лежа","set":1,"reps":10,"weight":55},{"date":"2026-02-21","exercise":"Жим лежа","set":2,"reps":6,"weight":70},{"date":"2026-02-21","exercise":"Жим лежа","set":3,"reps":5,"weight":70},{"date":"2026-02-24","exercise":"Становая тяга","set":1,"reps":12,"weight":50},{"date":"2026-02-24","exercise":"Становая тяга","set":2,"reps":12,"weight":60},{"date":"2026-02-24","exercise":"Становая тяга","set":3,"reps":17,"weight":70},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2026-02-28","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":1,"reps":12,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":2,"reps":16,"weight":0},{"date":"2026-03-01","exercise":"Отжимания на брусьях","set":3,"reps":25,"weight":0},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":1,"reps":12,"weight":37},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":2,"reps":12,"weight":37},{"date":"2026-03-01","exercise":"Тяга блока горизонтальная","set":3,"reps":9,"weight":47},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":1,"reps":12,"weight":35},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":2,"reps":12,"weight":35},{"date":"2026-03-01","exercise":"Тяга блока вертикальная","set":3,"reps":10,"weight":35},{"date":"2026-03-01","exercise":"Бицепс","set":1,"reps":12,"weight":20},{"date":"2026-03-01","exercise":"Бицепс","set":2,"reps":10,"weight":20},{"date":"2026-03-01","exercise":"Бицепс","set":3,"reps":8,"weight":20},{"date":"2026-03-03","exercise":"Приседания","set":1,"reps":12,"weight":50},{"date":"2026-03-03","exercise":"Приседания","set":2,"reps":12,"weight":30},{"date":"2026-03-03","exercise":"Приседания","set":3,"reps":16,"weight":70}];
 
-// Load from localStorage if available
+// Load from localStorage (full data). Legacy: small stored = delta, merge once and re-save full.
 const stored = localStorage.getItem('ironlog_data');
 if (stored) {
   try {
-    const extra = JSON.parse(stored);
-    workoutData = [...workoutData, ...extra];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {}
+    else if (parsed.length > 0 && parsed.length < 150) {
+      workoutData = [...workoutData, ...parsed];
+      localStorage.setItem('ironlog_data', JSON.stringify(workoutData));
+    } else {
+      workoutData = parsed;
+    }
   } catch(e) {}
 }
 
@@ -1216,12 +1291,7 @@ function saveWorkout() {
 
   if (!newSets.length) return;
   workoutData = [...workoutData, ...newSets];
-
-  // Save extras to localStorage
-  const stored = localStorage.getItem('ironlog_data');
-  let extra = [];
-  try { extra = stored ? JSON.parse(stored) : []; } catch(e) {}
-  localStorage.setItem('ironlog_data', JSON.stringify([...extra, ...newSets]));
+  localStorage.setItem('ironlog_data', JSON.stringify(workoutData));
 
   // Refresh
   init();
@@ -1388,6 +1458,90 @@ function exportToExcel() {
   const filename = `IronLog_${today}.xlsx`;
   XLSX.writeFile(wb, filename);
   showToast('📥 Экспорт в Excel готов!');
+}
+
+// ===================== CLEAR ALL =====================
+function clearAllWorkouts() {
+  if (!confirm('Удалить все тренировки? Это действие нельзя отменить.')) return;
+  workoutData = [];
+  localStorage.removeItem('ironlog_data');
+  init();
+  showToast('Все тренировки удалены');
+}
+
+// ===================== IMPORT =====================
+function importFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const name = file.name.toLowerCase();
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = e.target.result;
+      let imported = [];
+
+      if (name.endsWith('.json')) {
+        const parsed = JSON.parse(data);
+        imported = Array.isArray(parsed) ? parsed : (parsed.workoutData || parsed.data || []);
+        imported = imported.filter(x => x.date && x.exercise && x.reps > 0);
+      } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        const wb = XLSX.read(data, { type: 'binary' });
+        const firstSheet = wb.SheetNames[0];
+        const ws = wb.Sheets[firstSheet];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
+        if (rows.length < 2) { showToast('Файл пуст или неверный формат'); input.value = ''; return; }
+        const headers = (rows[0] || []).map(h => String(h || '').toLowerCase());
+        const dateIdx = headers.findIndex(h => h.includes('дата'));
+        const exIdx = headers.findIndex(h => h.includes('упражнение'));
+        const setIdx = headers.findIndex(h => h.includes('подход') || h.includes('№'));
+        const repsIdx = headers.findIndex(h => h.includes('повтор'));
+        const weightIdx = headers.findIndex(h => h.includes('вес'));
+        const defIdx = (arr, i, fallback) => (arr[i] != null && arr[i] !== '' ? arr[i] : fallback);
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i] || [];
+          let dateVal = defIdx(r, dateIdx >= 0 ? dateIdx : 0, r[0]);
+          const exVal = defIdx(r, exIdx >= 0 ? exIdx : 1, r[1]);
+          const setVal = defIdx(r, setIdx >= 0 ? setIdx : 3, r[3]);
+          const repsVal = defIdx(r, repsIdx >= 0 ? repsIdx : 4, r[4]);
+          const weightVal = defIdx(r, weightIdx >= 0 ? weightIdx : 5, r[5]);
+          if (typeof dateVal === 'number' && XLSX.SSF && XLSX.SSF.parse_date_code) {
+            const d = XLSX.SSF.parse_date_code(dateVal);
+            if (d) dateVal = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+          }
+          let date = String(dateVal || '').trim();
+          const exercise = String(exVal || '').trim();
+          const set = parseInt(setVal) || 1;
+          const reps = parseInt(repsVal) || 0;
+          const weight = parseFloat(String(weightVal).replace(',','.')) || 0;
+          if (!date || !exercise || reps <= 0) continue;
+          if (date.includes('T')) date = date.split('T')[0];
+          if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(date)) {
+            const parts = date.split('.');
+            date = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          }
+          if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            imported.push({ date, exercise, set, reps, weight });
+          }
+        }
+      }
+
+      if (!imported.length) { showToast('Не найдено данных для импорта'); input.value = ''; return; }
+
+      workoutData = imported;
+      localStorage.setItem('ironlog_data', JSON.stringify(imported));
+      init();
+      showToast(`Загружено ${imported.length} подходов`);
+    } catch (err) {
+      showToast('Ошибка при чтении файла');
+      console.error(err);
+    }
+    input.value = '';
+  };
+
+  if (name.endsWith('.json')) reader.readAsText(file);
+  else reader.readAsBinaryString(file);
 }
 
 // ===================== START =====================
