@@ -648,6 +648,51 @@
     box-shadow: 0 0 18px rgba(236,72,153,0.25);
   }
   .clear-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* EDIT / DELETE WORKOUT ACTIONS */
+  .day-actions {
+    display: flex; gap: 4px; align-items: center; flex-shrink: 0;
+  }
+  .btn-edit-day, .btn-del-day {
+    background: transparent; border: none;
+    cursor: pointer; padding: 5px 6px;
+    border-radius: 8px; transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-edit-day { color: var(--blue); }
+  .btn-del-day  { color: var(--pink); }
+  .btn-edit-day:active { background: rgba(59,130,246,0.15); }
+  .btn-del-day:active  { background: rgba(236,72,153,0.15); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 1000;
+    display: flex; align-items: flex-end;
+    backdrop-filter: blur(4px);
+  }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 1px solid rgba(139,92,246,0.3);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 16px calc(20px + var(--safe-bot));
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-box::-webkit-scrollbar { display: none; }
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px; font-weight: 700;
+    color: var(--violet); letter-spacing: 2px;
+    margin-bottom: 14px; text-align: center;
+  }
+  .edit-row {
+    display: flex; gap: 6px; align-items: center;
+    margin-bottom: 8px;
+  }
 </style>
 </head>
 <body>
@@ -896,6 +941,23 @@
 </div>
 
 <div class="toast" id="toast">✓ Тренировка сохранена!</div>
+
+<div class="modal-overlay" id="editModal" style="display:none" onclick="closeEditModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">РЕДАКТИРОВАТЬ ТРЕНИРОВКУ</div>
+    <div class="input-group">
+      <div class="input-label">ДАТА</div>
+      <input type="date" class="inp" id="editDate">
+    </div>
+    <div class="input-label" style="margin-bottom:8px">ПОДХОДЫ</div>
+    <div id="editRowsContainer"></div>
+    <button class="btn btn-add-set btn-sm" onclick="addEditRow()" style="margin-bottom:14px;width:100%">+ Добавить строку</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveEditModal()" style="flex:2">✓ Сохранить</button>
+      <button class="btn" onclick="closeEditModal()" style="flex:1;background:var(--surface3);color:var(--text-dim);border:1px solid var(--border)">Отмена</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===================== DATA =====================
@@ -1293,11 +1355,24 @@ function buildHistory() {
     return `
       <div class="workout-day">
         <div class="workout-day-header" onclick="toggleDay(this)">
-          <div>
+          <div style="flex:1;min-width:0">
             <div class="workout-date">${formatDateFull(date)}</div>
             <div class="workout-exercises-list">${exNames.join(' · ')}</div>
           </div>
-          <div class="workout-sets-count">${sets.length} подх.</div>
+          <div class="day-actions">
+            <div class="workout-sets-count">${sets.length} подх.</div>
+            <button class="btn-edit-day" onclick="event.stopPropagation();openEditModal('${date}')" title="Редактировать">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="btn-del-day" onclick="event.stopPropagation();deleteWorkout('${date}')" title="Удалить">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="workout-day-body">
           ${sets.map(s => `
@@ -1327,6 +1402,87 @@ function saveHistoryComment(date, value) {
     delete workoutComments[date];
   }
   localStorage.setItem('ironlog_comments', JSON.stringify(workoutComments));
+}
+
+// ===================== DELETE / EDIT WORKOUT =====================
+function deleteWorkout(date) {
+  if (!confirm('Удалить тренировку за ' + formatDateFull(date) + '?')) return;
+  workoutData = workoutData.filter(d => d.date !== date);
+  delete workoutComments[date];
+  localStorage.setItem('ironlog_data', JSON.stringify(workoutData));
+  localStorage.setItem('ironlog_comments', JSON.stringify(workoutComments));
+  init();
+  showToast('Тренировка удалена');
+}
+
+let editOrigDate = '';
+let editRows = [];
+
+function openEditModal(date) {
+  editOrigDate = date;
+  const sets = workoutData
+    .filter(d => d.date === date)
+    .sort((a, b) => a.exercise.localeCompare(b.exercise, 'ru') || a.set - b.set);
+  editRows = sets.map(s => ({ exercise: s.exercise, reps: s.reps, weight: s.weight }));
+  document.getElementById('editDate').value = date;
+  renderEditRows();
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function renderEditRows() {
+  const container = document.getElementById('editRowsContainer');
+  container.innerHTML = editRows.map((row, i) => `
+    <div class="edit-row">
+      <select class="inp" style="flex:2;font-size:12px;padding:8px 8px" onchange="editRows[${i}].exercise=this.value">
+        ${ALL_EXERCISES.map(ex => `<option value="${ex}"${row.exercise===ex?' selected':''}>${ex}</option>`).join('')}
+      </select>
+      <input type="number" class="inp" placeholder="Повт" value="${row.reps||''}" style="flex:1;font-size:12px;padding:8px 8px" oninput="editRows[${i}].reps=parseInt(this.value)||0">
+      <input type="number" class="inp" placeholder="кг" value="${row.weight||''}" style="flex:1;font-size:12px;padding:8px 8px" oninput="editRows[${i}].weight=parseFloat(this.value)||0">
+      <button class="btn-remove" onclick="removeEditRow(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function addEditRow() {
+  editRows.push({ exercise: ALL_EXERCISES[0], reps: 0, weight: 0 });
+  renderEditRows();
+}
+
+function removeEditRow(i) {
+  editRows.splice(i, 1);
+  renderEditRows();
+}
+
+function saveEditModal() {
+  const newDate = document.getElementById('editDate').value;
+  if (!newDate) return;
+  const validRows = editRows.filter(r => r.reps > 0);
+  if (!validRows.length) return;
+
+  workoutData = workoutData.filter(d => d.date !== editOrigDate);
+
+  if (newDate !== editOrigDate && workoutComments[editOrigDate]) {
+    workoutComments[newDate] = workoutComments[editOrigDate];
+    delete workoutComments[editOrigDate];
+  }
+
+  const setCounters = {};
+  const newSets = validRows.map(r => {
+    setCounters[r.exercise] = (setCounters[r.exercise] || 0) + 1;
+    return { date: newDate, exercise: r.exercise, set: setCounters[r.exercise], reps: r.reps, weight: r.weight };
+  });
+
+  workoutData = [...workoutData, ...newSets];
+  localStorage.setItem('ironlog_data', JSON.stringify(workoutData));
+  localStorage.setItem('ironlog_comments', JSON.stringify(workoutComments));
+
+  closeEditModal();
+  init();
+  showToast('✓ Тренировка обновлена!');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
 }
 
 function setHistFilter(ex, el) {
